@@ -179,7 +179,8 @@ physical kick to the ray, and prevents an unresolved `lambda/sin²(theta)` spike
 from becoming a screen seam.
 The first two valid crossings of `mu = 0` become ordered thin-disk intersections,
 stored as Cartesian disk-plane coordinates to avoid interpolating across an azimuth
-branch cut;
+branch cut. The transfer map retains a radial guard band beyond the visible annulus,
+allowing the display-resolution shader to reconstruct the true disk edge;
 an escaped ray stores its asymptotic sky direction. A fixed 224-step midpoint
 integrator runs only when the transfer map is invalidated, not in steady-state
 animation frames.

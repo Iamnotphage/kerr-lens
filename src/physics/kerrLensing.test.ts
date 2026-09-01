@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   kerrCriticalCurve,
+  kerrPolarMinoAccelerationMu,
   kerrPolarPotentialMu,
+  kerrRadialMinoAcceleration,
   kerrRadialPotential,
   kerrScreenConstants,
   kerrShadowProfile,
@@ -41,6 +43,31 @@ describe("spherical Kerr photon orbits", () => {
       (2 * epsilon);
     expect(derivative).toBeCloseTo(0, 5);
     expect(kerrPolarPotentialMu(0, spin, lambda, eta)).toBe(eta);
+  });
+
+  it("uses the continuous Mino accelerations at radial and polar turning points", () => {
+    const spin = 0.8;
+    const lambda = -1.7;
+    const eta = 8.2;
+    const radiusM = 5.4;
+    const cosineTheta = 0.37;
+    const epsilon = 1e-5;
+    const radialHalfDerivative =
+      (kerrRadialPotential(radiusM + epsilon, spin, lambda, eta) -
+        kerrRadialPotential(radiusM - epsilon, spin, lambda, eta)) /
+      (4 * epsilon);
+    const polarHalfDerivative =
+      (kerrPolarPotentialMu(cosineTheta + epsilon, spin, lambda, eta) -
+        kerrPolarPotentialMu(cosineTheta - epsilon, spin, lambda, eta)) /
+      (4 * epsilon);
+    expect(kerrRadialMinoAcceleration(radiusM, spin, lambda, eta)).toBeCloseTo(
+      radialHalfDerivative,
+      7,
+    );
+    expect(kerrPolarMinoAccelerationMu(cosineTheta, spin, lambda, eta)).toBeCloseTo(
+      polarHalfDerivative,
+      9,
+    );
   });
 });
 

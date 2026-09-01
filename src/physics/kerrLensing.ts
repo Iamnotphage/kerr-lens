@@ -115,6 +115,18 @@ export function kerrRadialPotential(
   return p * p - delta * ((lambda - spin) ** 2 + eta);
 }
 
+/** Half the radial-potential derivative: d²r/dγ² for Mino time γ. */
+export function kerrRadialMinoAcceleration(
+  radiusM: number,
+  spin: number,
+  lambda: number,
+  eta: number,
+): number {
+  const p = radiusM * radiusM + spin * spin - spin * lambda;
+  const radialConstant = (lambda - spin) ** 2 + eta;
+  return 2 * radiusM * p - (radiusM - 1) * radialConstant;
+}
+
 /** Carter polar polynomial (d cos(theta) / d gamma)². */
 export function kerrPolarPotentialMu(
   cosineTheta: number,
@@ -127,6 +139,19 @@ export function kerrPolarPotentialMu(
     eta +
     (spin * spin - eta - lambda * lambda) * cosineSquared -
     spin * spin * cosineSquared * cosineSquared
+  );
+}
+
+/** Half the polar-potential derivative: d²cos(θ)/dγ². */
+export function kerrPolarMinoAccelerationMu(
+  cosineTheta: number,
+  spin: number,
+  lambda: number,
+  eta: number,
+): number {
+  return (
+    (spin * spin - eta - lambda * lambda) * cosineTheta -
+    2 * spin * spin * cosineTheta ** 3
   );
 }
 

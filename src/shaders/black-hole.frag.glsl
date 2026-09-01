@@ -233,7 +233,19 @@ vec2 skyUv(vec3 direction) {
 
 vec3 skyColor(vec3 direction) {
   if (uSkyEnabled == 0) return vec3(0.001, 0.002, 0.005);
-  vec3 color = texture(uSkyTexture, skyUv(direction)).rgb;
+  vec2 uv = skyUv(direction);
+  vec3 color = texture(uSkyTexture, uv).rgb;
+  // The photographic panorama is periodic in longitude but its source edges
+  // are not pixel-identical. Blend a narrow strip in spherical coordinates so
+  // strong lensing cannot magnify that asset boundary into a screen-space cut.
+  const float seamWidth = 0.018;
+  float signedSeam = uv.x < 0.5 ? uv.x : uv.x - 1.0;
+  if (abs(signedSeam) < seamWidth) {
+    vec3 leftEdge = texture(uSkyTexture, vec2(1.0 - seamWidth, uv.y)).rgb;
+    vec3 rightEdge = texture(uSkyTexture, vec2(seamWidth, uv.y)).rgb;
+    float seamBlend = smoothstep(-seamWidth, seamWidth, signedSeam);
+    color = mix(leftEdge, rightEdge, seamBlend);
+  }
   return color * 0.9;
 }
 

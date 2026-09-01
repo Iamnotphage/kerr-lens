@@ -97,6 +97,12 @@ integrable `lambda/sin²(theta)` spike. The jump approaches an opposite-meridian
 for zero axial angular momentum. This removes a false center seam while keeping the fixed
 rebuild budget bounded.
 
+Equatorial crossings are retained through a `2.25–14 r_s` guard band around the visible
+`3–12 r_s` annulus. The full-resolution display shader evaluates the actual disk edge from
+the interpolated Cartesian radius, instead of magnifying a low-resolution hit/no-hit edge.
+The photographic sky's non-identical longitude endpoints are likewise crossfaded over a
+narrow spherical strip so lensing cannot turn an asset seam into a screen-space cut.
+
 Changing spin, inclination, observer radius, or viewport aspect invalidates the map. The
 renderer waits 55 ms for a stream of input events to settle, performs one offscreen MRT
 draw with a fixed 224-step Carter integrator, then returns to the steady-state contract:

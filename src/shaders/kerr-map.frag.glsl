@@ -11,8 +11,8 @@ uniform float uSpin;
 uniform float uObserverRadiusRs;
 uniform float uObserverInclination;
 
-const float INNER_DISK_RADIUS_RS = 3.0;
-const float OUTER_DISK_RADIUS_RS = 12.0;
+const float DISK_TRANSFER_MIN_RS = 2.25;
+const float DISK_TRANSFER_MAX_RS = 14.0;
 const float POLAR_CHART_CAP = 0.995;
 const int MAX_STEPS = 224;
 
@@ -198,8 +198,8 @@ void main() {
       float hitRadiusM = mix(position.x, next.x, crossing);
       float hitRadiusRs = hitRadiusM * 0.5;
       if (
-        hitRadiusRs >= INNER_DISK_RADIUS_RS * 0.985 &&
-        hitRadiusRs <= OUTER_DISK_RADIUS_RS * 1.015
+        hitRadiusRs >= DISK_TRANSFER_MIN_RS &&
+        hitRadiusRs <= DISK_TRANSFER_MAX_RS
       ) {
         vec4 hit = encodedDiskHit(
           hitRadiusM,
