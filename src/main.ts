@@ -17,7 +17,7 @@ import {
 } from "./validation/FrameBenchmark";
 
 interface ValidationReport {
-  readonly version: "2.0";
+  readonly version: "2.0.1";
   readonly observer: ObserverState;
   readonly kerr: KerrParameters;
   readonly appearance: DiskAppearance;
@@ -25,6 +25,7 @@ interface ValidationReport {
   readonly drawingBuffer: readonly [number, number];
   readonly devicePixelRatio: number;
   readonly gpu: ReturnType<BlackHoleRenderer["getDiagnostics"]>;
+  readonly simulationTime: number;
   readonly frames: FrameStatistics | null;
 }
 
@@ -34,6 +35,7 @@ declare global {
       ready: boolean;
       getReport: () => ValidationReport;
       resetBenchmark: () => void;
+      setSimulationTime: (simulationTime: number) => void;
     };
   }
 }
@@ -216,7 +218,7 @@ async function start(): Promise<void> {
   const validationReport = (): ValidationReport => {
     const buffer = blackHole.getDrawingBufferSize();
     return {
-      version: "2.0",
+      version: "2.0.1",
       observer: { ...observer },
       kerr: activeKerr,
       appearance: appearanceInput.value as DiskAppearance,
@@ -224,6 +226,7 @@ async function start(): Promise<void> {
       drawingBuffer: [buffer.x, buffer.y],
       devicePixelRatio: window.devicePixelRatio || 1,
       gpu: blackHole.getDiagnostics(),
+      simulationTime: blackHole.getSimulationTime(),
       frames: benchmarkProgress.statistics,
     };
   };
@@ -265,6 +268,7 @@ async function start(): Promise<void> {
       benchmarkP99.value = "—";
       updateBenchmarkUi();
     },
+    setSimulationTime: (simulationTime) => blackHole.setSimulationTime(simulationTime),
   };
 
   benchmarkCopy.addEventListener("click", async () => {

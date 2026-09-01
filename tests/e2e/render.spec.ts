@@ -82,7 +82,7 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   expect(canvasBounds?.height).toBeGreaterThan(400);
   expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
 
-  await page.screenshot({ path: testInfo.outputPath("kerr-lens-v2.0.png"), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath("kerr-lens-v2.0.1.png"), fullPage: true });
 
   // A near face-on view exposes any angular wrap discontinuity as a radial
   // wedge, so preserve it as explicit visual evidence in the CI artifact.
@@ -91,6 +91,40 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   await page.locator("#toggle-panel").click();
   await page.waitForTimeout(300);
   await page.screenshot({ path: testInfo.outputPath("disk-seam-probe.png"), fullPage: true });
+});
+
+test("keeps finite-coherence disk structure after long simulation times", async ({
+  page,
+}, testInfo) => {
+  const runtimeErrors = watchRuntimeErrors(page);
+  await page.goto("/");
+  await waitForRenderer(page);
+
+  await page.locator("#toggle-panel").click();
+  await page.locator("#paused").check({ force: true });
+  await page.locator("#inclination").fill("8");
+  await page.locator("#toggle-panel").click();
+
+  for (const simulationTime of [0, 3_600, 86_400]) {
+    const report = await page.evaluate((time) => {
+      const validationWindow = window as typeof window & {
+        __KERR_LENS_VALIDATION__?: {
+          getReport: () => { simulationTime: number };
+          setSimulationTime: (value: number) => void;
+        };
+      };
+      validationWindow.__KERR_LENS_VALIDATION__?.setSimulationTime(time);
+      return validationWindow.__KERR_LENS_VALIDATION__?.getReport();
+    }, simulationTime);
+    expect(report?.simulationTime).toBe(simulationTime);
+    await page.waitForTimeout(180);
+    await page.screenshot({
+      path: testInfo.outputPath(`disk-coherence-t${simulationTime}.png`),
+      fullPage: true,
+    });
+  }
+
+  expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
 });
 
 test("captures the appearance and inclination validation matrix", async ({
@@ -154,9 +188,9 @@ test("exports a fixed-scene frame-time distribution", async ({ page }, testInfo)
   expect(result.gpu.renderer.length).toBeGreaterThan(0);
   expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
 
-  await testInfo.attach("benchmark-v2.0.json", {
+  await testInfo.attach("benchmark-v2.0.1.json", {
     body: JSON.stringify(report, null, 2),
     contentType: "application/json",
   });
-  await page.screenshot({ path: testInfo.outputPath("benchmark-v2.0.png"), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath("benchmark-v2.0.1.png"), fullPage: true });
 });
