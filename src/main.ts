@@ -1,7 +1,11 @@
 import "./style.css";
 
 import { thermalDiskParameters } from "./physics/thinDisk";
-import { BlackHoleRenderer, type RendererSettings } from "./render/BlackHoleRenderer";
+import {
+  BlackHoleRenderer,
+  type DiskAppearance,
+  type RendererSettings,
+} from "./render/BlackHoleRenderer";
 import { ObserverController, type ObserverState } from "./render/ObserverController";
 import { PerformanceGovernor, type QualityMode } from "./render/PerformanceGovernor";
 import { loadPhysicsTextures } from "./render/loadPhysicsTextures";
@@ -14,7 +18,7 @@ function element<T extends HTMLElement>(id: string): T {
 
 const DEFAULT_OBSERVER: ObserverState = {
   radius: 26,
-  inclination: (68 * Math.PI) / 180,
+  inclination: (85 * Math.PI) / 180,
   azimuth: 0.36,
 };
 
@@ -30,6 +34,7 @@ const distanceInput = element<HTMLInputElement>("distance");
 const massInput = element<HTMLInputElement>("mass");
 const eddingtonRatioInput = element<HTMLInputElement>("eddington-ratio");
 const exposureInput = element<HTMLInputElement>("exposure");
+const appearanceInput = element<HTMLSelectElement>("disk-appearance");
 const qualityInput = element<HTMLSelectElement>("quality");
 const diskInput = element<HTMLInputElement>("disk-enabled");
 const dopplerInput = element<HTMLInputElement>("doppler-enabled");
@@ -41,9 +46,12 @@ const distanceValue = element<HTMLOutputElement>("distance-value");
 const massValue = element<HTMLOutputElement>("mass-value");
 const eddingtonRatioValue = element<HTMLOutputElement>("eddington-ratio-value");
 const colorTemperatureValue = element<HTMLOutputElement>("color-temperature-value");
-const effectiveTemperatureValue = element<HTMLSpanElement>("effective-temperature-value");
-const accretionRateValue = element<HTMLSpanElement>("accretion-rate-value");
+const modelReadoutLabel = element<HTMLSpanElement>("model-readout-label");
+const modelReadoutDetail = element<HTMLElement>("model-readout-detail");
+const appearanceNote = element<HTMLParagraphElement>("appearance-note");
 const exposureValue = element<HTMLOutputElement>("exposure-value");
+const heroEyebrow = element<HTMLParagraphElement>("hero-eyebrow");
+const heroDetail = element<HTMLParagraphElement>("hero-detail");
 
 const fpsElement = element<HTMLSpanElement>("fps");
 const frameTimeElement = element<HTMLSpanElement>("frame-time");
@@ -58,6 +66,7 @@ const initialSettings: RendererSettings = {
   peakColorTemperature: initialDisk.peakColorTemperatureK,
   spectralDilution: initialDisk.spectralDilution,
   exposure: Number(exposureInput.value),
+  diskAppearance: appearanceInput.value as DiskAppearance,
   diskEnabled: diskInput.checked,
   dopplerEnabled: dopplerInput.checked,
   skyEnabled: skyInput.checked,
@@ -145,20 +154,50 @@ async function start(): Promise<void> {
     distanceValue.value = `${state.radius.toFixed(1)} rₛ`;
   };
 
+  let activeDisk = initialDisk;
+
+  const updateAppearanceUi = (appearance: DiskAppearance): void => {
+    const cinematic = appearance === "cinematic";
+    massInput.disabled = cinematic;
+    eddingtonRatioInput.disabled = cinematic;
+    massInput.closest(".control")?.classList.toggle("control--disabled", cinematic);
+    eddingtonRatioInput.closest(".control")?.classList.toggle("control--disabled", cinematic);
+
+    if (cinematic) {
+      modelReadoutLabel.textContent = "CINEMATIC REFERENCE · ART-DIRECTED";
+      colorTemperatureValue.value = "4,500 K";
+      modelReadoutDetail.textContent = "DNGR-inspired · marginal optical depth";
+      appearanceNote.textContent =
+        "4500 K artist-directed material; geodesic lensing remains physical.";
+      heroEyebrow.textContent = "DNGR-INSPIRED CINEMATIC DISK";
+      heroDetail.textContent =
+        "Schwarzschild geodesics lens a warm, marginally opaque 4500 K presentation disk.";
+    } else {
+      modelReadoutLabel.textContent = "DERIVED COLOR PEAK · fcol 1.7";
+      colorTemperatureValue.value = formatTemperature(activeDisk.peakColorTemperatureK);
+      modelReadoutDetail.textContent =
+        `${formatTemperature(activeDisk.peakEffectiveTemperatureK)} effective · ` +
+        `${formatAccretionRate(activeDisk.accretionRateSolarPerYear)}`;
+      appearanceNote.textContent =
+        "Page–Thorne flux, diluted blackbody spectrum, and an optically thick surface.";
+      heroEyebrow.textContent = "PAGE–THORNE THERMAL DISK";
+      heroDetail.textContent =
+        "Null geodesics bend the image; mass and accretion rate set the disk spectrum.";
+    }
+  };
+
   const updateDiskModel = (): void => {
-    const disk = thermalDiskParameters(
+    activeDisk = thermalDiskParameters(
       10 ** Number(massInput.value),
       10 ** Number(eddingtonRatioInput.value),
     );
-    massValue.value = formatMass(disk.massSolar);
-    eddingtonRatioValue.value = `${disk.eddingtonRatio.toFixed(3)} L_Edd`;
-    colorTemperatureValue.value = formatTemperature(disk.peakColorTemperatureK);
-    effectiveTemperatureValue.textContent = formatTemperature(disk.peakEffectiveTemperatureK);
-    accretionRateValue.textContent = formatAccretionRate(disk.accretionRateSolarPerYear);
+    massValue.value = formatMass(activeDisk.massSolar);
+    eddingtonRatioValue.value = `${activeDisk.eddingtonRatio.toFixed(3)} L_Edd`;
     blackHole.updateSettings({
-      peakColorTemperature: disk.peakColorTemperatureK,
-      spectralDilution: disk.spectralDilution,
+      peakColorTemperature: activeDisk.peakColorTemperatureK,
+      spectralDilution: activeDisk.spectralDilution,
     });
+    updateAppearanceUi(appearanceInput.value as DiskAppearance);
   };
 
   const controller = new ObserverController(canvas, observer, {
@@ -185,6 +224,17 @@ async function start(): Promise<void> {
     const exposure = Number(exposureInput.value);
     exposureValue.value = exposure.toFixed(2);
     blackHole.updateSettings({ exposure });
+  });
+  appearanceInput.addEventListener("change", () => {
+    const diskAppearance = appearanceInput.value as DiskAppearance;
+    const cinematic = diskAppearance === "cinematic";
+    dopplerInput.checked = !cinematic;
+    blackHole.updateSettings({
+      diskAppearance,
+      dopplerEnabled: dopplerInput.checked,
+    });
+    updateAppearanceUi(diskAppearance);
+    governor.markInteraction(350);
   });
   qualityInput.addEventListener("change", () => {
     governor.setMode(qualityInput.value as QualityMode);

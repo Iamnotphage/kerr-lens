@@ -138,6 +138,17 @@ The two-sample procedural field is advected with the Schwarzschild Keplerian ang
 
 The physical disk would continue to much larger radii. The current `12 r_s` outer fade bounds the portion sent to the two-intersection beam tracer; it is a display window, not a predicted disk edge. Finite thickness, limb darkening, returning radiation, self-irradiation, atmosphere lines, and magnetic stress across the ISCO remain outside V1.2.
 
+### Appearance modes
+
+V1.2.1 exposes the scientific material above as **Scientific · NT** and adds a separately labelled **Cinematic · DNGR** presentation. The cinematic preset does not replace or modify the null-geodesic calculation. It changes only the source material and default camera presentation:
+
+- the default inclination is `85°`, close to the `86.56°` camera used in the DNGR paper's disk examples;
+- the source spectrum is held at `4500 K` instead of using the Page–Thorne radial temperature profile;
+- a two-sample procedural field controls both emissivity and a marginal optical depth, approximated as `α = τ/(1+τ)`; and
+- relativistic frequency shift is disabled by default but remains available as a toggle.
+
+James et al. describe the *Interstellar* disk as an artist-created, physically thin, marginally optically thick, non-accreting surface cooled to a position-independent `4500 K`. They also document the decision to omit the strongly asymmetric frequency-shifted brightness in the released film. The cinematic preset follows those presentation choices, but it does not reproduce DNGR's volumetric assets, procedural Mantra close-ups, lens model, or Kerr geodesics. It must therefore not be interpreted as a physical prediction or a pixel-identical film reconstruction.
+
 ## Celestial background
 
 Escaped rays sample an equirectangular ESO/S. Brunier Milky Way panorama, so the same Schwarzschild geodesic mapping lenses the background and the disk. The panorama supplies visual context only: its orientation is presentational, and it is not a Gaia-calibrated astrometric or photometric sky model.

@@ -8,7 +8,7 @@
       content="A performance-first, physically grounded Schwarzschild black hole renderer for the web."
     />
     <meta name="theme-color" content="#03050a" />
-    <title>Kerr Lens — Schwarzschild V1.2</title>
+    <title>Kerr Lens — Schwarzschild V1.2.1</title>
   </head>
   <body>
     <main id="app">
@@ -21,14 +21,14 @@
           <span class="brand__dot" aria-hidden="true"></span>
           KERR LENS
         </a>
-        <span class="brand__version">SCHWARZSCHILD / V1.2</span>
+        <span class="brand__version">SCHWARZSCHILD / V1.2.1</span>
       </header>
 
       <section class="hero-copy" aria-label="Visualization summary">
-        <p class="eyebrow">PAGE–THORNE THERMAL DISK</p>
+        <p class="eyebrow" id="hero-eyebrow">DNGR-INSPIRED CINEMATIC DISK</p>
         <h1>Light follows<br /><em>curved spacetime.</em></h1>
-        <p class="hero-copy__detail">
-          Null geodesics bend the image; mass and accretion rate now set the disk spectrum.
+        <p class="hero-copy__detail" id="hero-detail">
+          Schwarzschild geodesics lens a warm, marginally opaque 4500 K presentation disk.
         </p>
       </section>
 
@@ -44,9 +44,20 @@
         </div>
 
         <div class="panel__body" id="panel-body">
+          <div class="control control--select control--appearance">
+            <label for="disk-appearance">Disk appearance</label>
+            <select id="disk-appearance" aria-describedby="appearance-note">
+              <option value="cinematic" selected>Cinematic · DNGR</option>
+              <option value="scientific">Scientific · NT</option>
+            </select>
+          </div>
+          <p class="appearance-note" id="appearance-note">
+            4500 K artist-directed material; geodesic lensing remains physical.
+          </p>
+
           <div class="control">
-            <div class="control__label"><label for="inclination">Inclination</label><output id="inclination-value">68°</output></div>
-            <input id="inclination" type="range" min="5" max="88" step="1" value="68" />
+            <div class="control__label"><label for="inclination">Inclination</label><output id="inclination-value">85°</output></div>
+            <input id="inclination" type="range" min="5" max="88" step="1" value="85" />
           </div>
 
           <div class="control">
@@ -65,9 +76,9 @@
           </div>
 
           <div class="model-readout" aria-live="polite">
-            <span>DERIVED COLOR PEAK · f<sub>col</sub> 1.7</span>
-            <output id="color-temperature-value">37,800 K</output>
-            <small><span id="effective-temperature-value">22,200 K</span> effective · <span id="accretion-rate-value">3.88 M☉/yr</span></small>
+            <span id="model-readout-label">CINEMATIC REFERENCE · ART-DIRECTED</span>
+            <output id="color-temperature-value">4,500 K</output>
+            <small id="model-readout-detail">DNGR-inspired · marginal optical depth</small>
           </div>
 
           <div class="control">
@@ -87,7 +98,7 @@
 
           <div class="switches">
             <label class="switch"><span>Thermal disk</span><input id="disk-enabled" type="checkbox" checked /><i></i></label>
-            <label class="switch"><span>Relativistic shift</span><input id="doppler-enabled" type="checkbox" checked /><i></i></label>
+            <label class="switch"><span>Relativistic shift</span><input id="doppler-enabled" type="checkbox" /><i></i></label>
             <label class="switch"><span>Background sky</span><input id="sky-enabled" type="checkbox" checked /><i></i></label>
             <label class="switch"><span>Pause motion</span><input id="paused" type="checkbox" /><i></i></label>
           </div>
