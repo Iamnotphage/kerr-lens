@@ -15,7 +15,7 @@ The render path is deliberately bounded:
 - no per-ray integration loop;
 - fixed lookup count for lensing and disk intersection;
 - at most two disk-shading evaluations;
-- one cached Page–Thorne profile lookup and four small, mipmapped noise samples per visible disk hit;
+- one cached Page–Thorne profile lookup and two small, mipmapped noise samples per visible disk hit;
 - no compulsory post-processing chain.
 
 The 2048×1024 Milky Way panorama adds 284 KiB to the transfer and approximately 10.7 MiB of GPU memory including mip levels. It replaces the previous CPU-generated sky without adding a render pass or per-frame upload.
@@ -71,10 +71,11 @@ uniform, texture lookup, or branch was added to the per-pixel render path, so th
 one-draw-call shader cost is identical to V1.3.
 
 V2.0.1 replaces the indefinitely sheared frozen turbulence texture with two overlapping,
-finite-age fields. Each field retains broad and fine noise, increasing the disk-shading
-budget from two to four 128×128 mipmapped samples per visible hit while preserving one
-full-screen triangle, one pass, and one draw call. The fields crossfade with zero-slope
-weights and never exceed two coherence windows of shear. Their 97-epoch sequence repeats
+finite-age fields. Broad and fine noise are prepacked into the R and G channels, so each
+field costs one 128×128 mipmapped sample and the disk-shading budget remains two samples
+per visible hit. The renderer still uses one full-screen triangle, one pass, and one draw
+call. The fields crossfade with zero-slope weights and never exceed two coherence windows
+of shear. Their 97-epoch sequence repeats
 exactly, so the CPU wraps only the GPU flow clock every 2,328 simulation units and avoids
 long-running `highp` phase loss without a visible reset. Use the matched-device 5%
 median/p95 rule above when judging the added sampling cost.

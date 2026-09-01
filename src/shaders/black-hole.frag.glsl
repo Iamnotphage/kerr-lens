@@ -275,11 +275,14 @@ float advectedDiskStructure(
   );
   vec2 flowPosition = radius * flowDirection;
   vec2 broadUv = flowPosition * 0.105;
-  float broad = texture(uNoiseTexture, broadUv + vec2(0.37, 0.71) + epochOffset).r;
-  float fine = texture(
+  // R stores the broad field and G stores a prepacked 3.65x-frequency field,
+  // keeping each finite-age generation to one texture lookup.
+  vec2 turbulence = texture(
     uNoiseTexture,
-    broadUv * 3.65 + vec2(0.13, 0.47) + vec2(epochOffset.y, -epochOffset.x)
-  ).r;
+    broadUv + vec2(0.37, 0.71) + epochOffset
+  ).rg;
+  float broad = turbulence.r;
+  float fine = turbulence.g;
 
   // sin(3a) = 3 sin(a) - 4 sin^3(a) gives a three-arm filament field
   // without a non-periodic raw-angle multiplier or another trig evaluation.

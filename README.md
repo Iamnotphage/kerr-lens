@@ -71,7 +71,7 @@ Mass and Eddington ratio are logarithmic controls spanning `10⁷–10¹⁰ M☉
 - Constant-time beam tracing through two small floating-point lookup textures.
 - A single render pass with no mandatory bloom chain.
 - The radial Page–Thorne temperature calculation is precomputed once into a 1 KiB `R32F` profile.
-- Both materials share four small, mipmapped noise samples per visible disk hit: two finite-age fields, each with broad and fine structure, are blended continuously. There is no particle loop, extra pass, or extra draw call.
+- Both materials share two small, mipmapped noise samples per visible disk hit. Broad and fine turbulence are packed into separate texture channels, so two finite-age fields can be blended continuously without increasing the V2.0 sample count. There is no particle loop, extra pass, or extra draw call.
 - High-performance WebGL context and no MSAA.
 - Render resolution drops temporarily during interaction.
 - Adaptive mode targets 60 fps using an exponential moving average of frame time.
