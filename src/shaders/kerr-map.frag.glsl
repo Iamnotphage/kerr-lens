@@ -13,20 +13,27 @@ uniform float uObserverInclination;
 
 const float DISK_TRANSFER_MIN_RS = 2.25;
 const float DISK_TRANSFER_MAX_RS = 14.0;
-const float POLAR_CHART_CAP = 0.995;
+// Only the measure-zero lambda = 0 family can reach the Boyer-Lindquist spin
+// axis.  Keep the chart transition inside a sub-texel polar cap; ordinary rays
+// reflect at their exact Carter turning root instead of an arbitrary latitude.
+const float POLAR_CHART_CAP = 0.99995;
 const int MAX_STEPS = 224;
 
-float polarChartAzimuthJump(float lambda, float eta) {
+float polarTurningCosineSquared(float lambda, float eta) {
   float spinSquared = uSpin * uSpin;
   float coefficient = spinSquared - eta - lambda * lambda;
-  float turningCosineSquared;
   if (spinSquared > 1e-5) {
-    turningCosineSquared =
+    return clamp(
       (coefficient + sqrt(max(coefficient * coefficient + 4.0 * spinSquared * eta, 0.0))) /
-      (2.0 * spinSquared);
-  } else {
-    turningCosineSquared = eta / max(eta + lambda * lambda, 1e-6);
+      (2.0 * spinSquared),
+      0.0,
+      1.0
+    );
   }
+  return clamp(eta / max(eta + lambda * lambda, 1e-6), 0.0, 1.0);
+}
+
+float polarChartAzimuthJump(float lambda, float turningCosineSquared) {
   float turningSine = sqrt(max(1.0 - clamp(turningCosineSquared, 0.0, 1.0), 0.0));
   float capSine = sqrt(1.0 - POLAR_CHART_CAP * POLAR_CHART_CAP);
   float halfJump = acos(clamp(turningSine / capSine, 0.0, 1.0));
@@ -64,7 +71,7 @@ void minoDerivative(
   float p = radiusSquared + spinSquared - uSpin * lambda;
   float shiftedMomentum = lambda - uSpin;
   float radialConstant = shiftedMomentum * shiftedMomentum + eta;
-  float sineSquared = max(1.0 - cosineSquared, 1e-5);
+  float sineSquared = max(1.0 - cosineSquared, 1e-7);
   float phiMino = lambda / sineSquared - uSpin + uSpin * p / delta;
   float timeMino = uSpin * (lambda - uSpin * sineSquared) +
     (radiusSquared + spinSquared) * p / delta;
@@ -138,6 +145,10 @@ void main() {
   );
   float outerHorizon = 1.0 + sqrt(max(1.0 - spinSquared, 0.0));
   float escapeRadius = max(initialRadius + 20.0, 72.0);
+  float turningCosineSquared = polarTurningCosineSquared(lambda, eta);
+  float polarTurningCosine = sqrt(turningCosineSquared);
+  float polarLimit = min(polarTurningCosine, POLAR_CHART_CAP);
+  bool usesPolarChartCap = polarTurningCosine > POLAR_CHART_CAP;
   int hitCount = 0;
 
   for (int stepIndex = 0; stepIndex < MAX_STEPS; stepIndex += 1) {
@@ -183,14 +194,17 @@ void main() {
     vec4 next = position + midpointCoordinateDerivative * minoStep;
     vec2 nextVelocity = velocity + midpointVelocityDerivative * minoStep;
 
-    // Boyer–Lindquist azimuth is singular on the spin axis. Reflect the polar
-    // chart coordinate at a small cap and add the integrated azimuth skipped
-    // inside it; the physical Cartesian direction remains continuous.
-    if (abs(next.y) >= POLAR_CHART_CAP) {
+    // Keep midpoint truncation inside the exact Carter interval. Only rays
+    // whose physical root lies inside the tiny axis cap need a BL chart
+    // transition and the corresponding skipped azimuth. This removes the
+    // former arbitrary-latitude boundary that appeared as a screen-space cut.
+    if (abs(next.y) > polarLimit) {
       float pole = next.y >= 0.0 ? 1.0 : -1.0;
-      next.y = pole * (2.0 * POLAR_CHART_CAP - abs(next.y));
-      nextVelocity.y = -nextVelocity.y;
-      next.z += polarChartAzimuthJump(lambda, eta);
+      next.y = pole * (2.0 * polarLimit - abs(next.y));
+      nextVelocity.y = -pole * abs(nextVelocity.y);
+      if (usesPolarChartCap) {
+        next.z += polarChartAzimuthJump(lambda, turningCosineSquared);
+      }
     }
 
     if (position.y * next.y <= 0.0 && position.y != next.y) {

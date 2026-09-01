@@ -486,36 +486,8 @@ vec2 rotateDiskPosition(vec2 position, float azimuth) {
   );
 }
 
-vec4 sampleTransferAcrossX(sampler2D transferMap, vec2 uv, vec2 texelSize) {
-  float halfBand = 1.35 * texelSize.x;
-  float axisDistance = uv.x - 0.5;
-  if (abs(axisDistance) >= halfBand) return texture(transferMap, uv);
-  vec4 negativeSide = texture(transferMap, vec2(0.5 - halfBand, uv.y));
-  vec4 positiveSide = texture(transferMap, vec2(0.5 + halfBand, uv.y));
-  float blend = smoothstep(-halfBand, halfBand, axisDistance);
-  return mix(negativeSide, positiveSide, blend);
-}
-
-/** Reconstruct the physically continuous field across BL chart-axis texels. */
 vec4 sampleKerrTransfer(sampler2D transferMap, vec2 uv) {
-  vec2 texelSize = 1.0 / vec2(textureSize(transferMap, 0));
-  float halfBand = 1.35 * texelSize.y;
-  float axisDistance = uv.y - 0.5;
-  if (abs(axisDistance) >= halfBand) {
-    return sampleTransferAcrossX(transferMap, uv, texelSize);
-  }
-  vec4 negativeSide = sampleTransferAcrossX(
-    transferMap,
-    vec2(uv.x, 0.5 - halfBand),
-    texelSize
-  );
-  vec4 positiveSide = sampleTransferAcrossX(
-    transferMap,
-    vec2(uv.x, 0.5 + halfBand),
-    texelSize
-  );
-  float blend = smoothstep(-halfBand, halfBand, axisDistance);
-  return mix(negativeSide, positiveSide, blend);
+  return texture(transferMap, uv);
 }
 
 float kerrScreenLambda(vec2 screen) {

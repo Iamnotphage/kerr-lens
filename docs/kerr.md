@@ -171,12 +171,12 @@ velocities with the continuous equations
 
 The velocities therefore pass smoothly through zero at Carter turning points; no
 pixel-dependent sign flip is needed.
-Because Boyer–Lindquist azimuth is undefined on the spin axis, the GPU performs an
-explicit polar-chart transition when a ray enters a small cap. The skipped azimuth
-is the near-axis integral determined by the exact polar turning root; it tends to
+The exact positive root of the polar polynomial bounds every ray's `mu` coordinate.
+The integrator reflects midpoint truncation at that Carter root, rather than at an
+arbitrary latitude. Only the measure-zero family approaching the spin axis enters a
+sub-texel Boyer–Lindquist chart cap, where the skipped near-axis azimuth tends to
 `phi -> phi ± pi` as `lambda -> 0`. This is a coordinate regularization, not a
-physical kick to the ray, and prevents an unresolved `lambda/sin²(theta)` spike
-from becoming a screen seam.
+physical kick to the ray.
 The first two valid crossings of `mu = 0` become ordered thin-disk intersections,
 stored as Cartesian disk-plane coordinates to avoid interpolating across an azimuth
 branch cut. The transfer map retains a radial guard band beyond the visible annulus,
@@ -190,11 +190,10 @@ The transfer map therefore always supplies its last finite sky direction: rays t
 linger near the photon region beyond the fixed step budget cannot turn into a false
 black halo outside the exact curve.
 
-At display time, the two approximately one-texel-wide transfer-map chart axes are
-reconstructed from values immediately on both sides. Kerr geodesic fields are physically
-continuous there; this narrow reconstruction prevents finite map sampling from exposing
-the coordinate chart as horizontal or vertical image cuts without filtering the rest of
-the frame.
+Because ordinary rays now turn at their physical Carter roots, the display shader can
+sample the transfer attachments directly. It does not blur or reconstruct screen axes,
+so thin-disk caustics retain their native map resolution without exposing the coordinate
+chart as horizontal or vertical image cuts.
 
 ## Exact critical curve
 

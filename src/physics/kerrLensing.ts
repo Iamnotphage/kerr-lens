@@ -142,6 +142,22 @@ export function kerrPolarPotentialMu(
   );
 }
 
+/** Positive Carter turning root in mu² = cos²(theta). */
+export function kerrPolarTurningCosineSquared(
+  spin: number,
+  lambda: number,
+  eta: number,
+): number {
+  const spinSquared = spin * spin;
+  if (spinSquared < 1e-10) {
+    return Math.max(0, Math.min(1, eta / Math.max(eta + lambda * lambda, 1e-12)));
+  }
+  const coefficient = spinSquared - eta - lambda * lambda;
+  const discriminant = coefficient * coefficient + 4 * spinSquared * eta;
+  const root = (coefficient + Math.sqrt(Math.max(discriminant, 0))) / (2 * spinSquared);
+  return Math.max(0, Math.min(1, root));
+}
+
 /** Half the polar-potential derivative: d²cos(θ)/dγ². */
 export function kerrPolarMinoAccelerationMu(
   cosineTheta: number,

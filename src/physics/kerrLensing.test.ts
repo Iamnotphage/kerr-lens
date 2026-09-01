@@ -4,6 +4,7 @@ import {
   kerrCriticalCurve,
   kerrPolarMinoAccelerationMu,
   kerrPolarPotentialMu,
+  kerrPolarTurningCosineSquared,
   kerrRadialMinoAcceleration,
   kerrRadialPotential,
   kerrScreenConstants,
@@ -68,6 +69,18 @@ describe("spherical Kerr photon orbits", () => {
       polarHalfDerivative,
       9,
     );
+  });
+
+  it("places the polar chart boundary on the exact Carter root", () => {
+    const spin = 0.8;
+    const lambda = -0.43;
+    const eta = 1.72;
+    const turningCosineSquared = kerrPolarTurningCosineSquared(spin, lambda, eta);
+    expect(turningCosineSquared).toBeGreaterThan(0);
+    expect(turningCosineSquared).toBeLessThan(1);
+    expect(
+      kerrPolarPotentialMu(Math.sqrt(turningCosineSquared), spin, lambda, eta),
+    ).toBeCloseTo(0, 12);
   });
 });
 
