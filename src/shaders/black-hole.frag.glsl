@@ -217,7 +217,7 @@ vec2 skyUv(vec3 direction) {
 vec3 skyColor(vec3 direction) {
   if (uSkyEnabled == 0) return vec3(0.001, 0.002, 0.005);
   vec3 color = texture(uSkyTexture, skyUv(direction)).rgb;
-  return color * color * 1.1;
+  return color * 0.9;
 }
 
 vec3 blackBodyRadiance(float temperature) {
@@ -242,9 +242,10 @@ float accretionDensity(float radius, float angle, float coordinateTime) {
   float phase = angle - coordinateTime * omega;
   vec2 flowUv = vec2(phase / TAU + radius * 0.017, log(radius) * 0.31);
   float broad = texture(uNoiseTexture, flowUv).r;
-  float fine = texture(uNoiseTexture, flowUv * vec2(2.7, 4.1) + vec2(0.17, 0.43)).r;
+  // Angular harmonics must be integers so atan's ±π branch is periodic.
+  float fine = texture(uNoiseTexture, flowUv * vec2(3.0, 4.1) + vec2(0.17, 0.43)).r;
   float filament = 0.62 * broad + 0.38 * fine;
-  float radialBands = 0.72 + 0.28 * sin(radius * 8.0 - phase * 1.7 + broad * 3.0);
+  float radialBands = 0.72 + 0.28 * sin(radius * 8.0 - phase * 2.0 + broad * 3.0);
   return clamp((0.38 + filament) * radialBands, 0.0, 1.25);
 }
 

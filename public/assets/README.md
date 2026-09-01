@@ -1,4 +1,6 @@
-# Physics assets
+# Render assets
+
+## Physics lookup data
 
 These files come from the compiled demo of Eric Bruneton's [`black_hole_shader`](https://github.com/ebruneton/black_hole_shader) project and are redistributed under its BSD-3-Clause license.
 
@@ -10,3 +12,11 @@ These files come from the compiled demo of Eric Bruneton's [`black_hole_shader`]
 | `noise_texture.png` | Procedural accretion-flow density input | `7ba6d84ad14496b6299b57dbbc75b400fad4e9ab022dcacfc7f3fa3751009ed9` |
 
 The first two floats in each ray table encode its width and height. Remaining values are little-endian 32-bit floats.
+
+## Celestial background
+
+| File | Purpose | SHA-256 |
+| --- | --- | --- |
+| `milky-way.webp` | 2048×1024 equirectangular Milky Way panorama | `7616eaf775537159bddef8ab7b5ebb3bb5b2e1c6c9c908cffd0b95512d9596ab` |
+
+Source: [The Milky Way panorama](https://www.eso.org/public/images/eso0932a/). Credit: ESO/S. Brunier. The repository copy is a downsampled, WebP-compressed adaptation distributed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).

@@ -35,3 +35,11 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
+
+## ESO / S. Brunier — The Milky Way panorama
+
+Source: <https://www.eso.org/public/images/eso0932a/>
+
+Credit: ESO/S. Brunier
+
+The `public/assets/milky-way.webp` file is a downsampled and WebP-compressed adaptation of the source panorama. It is used under the [Creative Commons Attribution 4.0 International license](https://creativecommons.org/licenses/by/4.0/) in accordance with [ESO's image-use policy](https://www.eso.org/public/copyright/).

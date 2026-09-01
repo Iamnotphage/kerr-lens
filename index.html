@@ -32,13 +32,13 @@
         </p>
       </section>
 
-      <aside class="panel" id="control-panel" aria-label="Simulation controls">
+      <aside class="panel panel--collapsed" id="control-panel" aria-label="Simulation controls">
         <div class="panel__header">
           <div>
             <p class="eyebrow">OBSERVER FRAME</p>
             <h2>Physical controls</h2>
           </div>
-          <button class="icon-button" id="toggle-panel" type="button" aria-label="Collapse controls" aria-expanded="true">
+          <button class="icon-button" id="toggle-panel" type="button" aria-label="Expand controls" aria-expanded="false">
             <span></span><span></span>
           </button>
         </div>
@@ -91,6 +91,15 @@
           <button class="reset-button" id="reset-view" type="button">Reset observer</button>
         </div>
       </aside>
+
+      <a
+        class="sky-credit"
+        href="https://www.eso.org/public/images/eso0932a/"
+        target="_blank"
+        rel="noreferrer"
+      >
+        MILKY WAY · ESO / S. BRUNIER
+      </a>
 
       <div class="status" role="status" aria-live="polite">
         <span class="status__live"><i></i>LIVE</span>

@@ -425,6 +425,25 @@ select {
   background: rgb(255 255 255 / 4%);
 }
 
+.sky-credit {
+  position: absolute;
+  z-index: 4;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  left: max(32px, env(safe-area-inset-left));
+  color: #6f7887;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 7px;
+  letter-spacing: 0.11em;
+  text-decoration: none;
+  text-shadow: 0 1px 10px #000;
+  transition: color 160ms ease;
+}
+
+.sky-credit:hover,
+.sky-credit:focus-visible {
+  color: #c4cbd6;
+}
+
 .status {
   position: absolute;
   z-index: 4;
@@ -648,6 +667,11 @@ select {
   .status {
     right: auto;
     bottom: max(18px, env(safe-area-inset-bottom));
+    left: 18px;
+  }
+
+  .sky-credit {
+    bottom: max(43px, calc(env(safe-area-inset-bottom) + 25px));
     left: 18px;
   }
 

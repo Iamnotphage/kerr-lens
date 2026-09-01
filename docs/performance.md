@@ -17,6 +17,8 @@ The render path is deliberately bounded:
 - at most two disk-shading evaluations;
 - no compulsory post-processing chain.
 
+The 2048×1024 Milky Way panorama adds 284 KiB to the transfer and approximately 10.7 MiB of GPU memory including mip levels. It replaces the previous CPU-generated sky without adding a render pass or per-frame upload.
+
 ## Adaptive resolution
 
 Adaptive mode maintains an exponential moving average of frame time.

@@ -3,11 +3,13 @@ import {
   DataTexture,
   FloatType,
   LinearFilter,
+  LinearMipmapLinearFilter,
   LoadingManager,
   NoColorSpace,
   RGBAFormat,
   RGFormat,
   RepeatWrapping,
+  SRGBColorSpace,
   Texture,
   TextureLoader,
 } from "three";
@@ -17,6 +19,7 @@ export interface PhysicsTextures {
   readonly inverseRadius: DataTexture;
   readonly blackBody: DataTexture;
   readonly noise: Texture;
+  readonly sky: Texture;
 }
 
 async function fetchBuffer(url: string, onFraction: (fraction: number) => void): Promise<ArrayBuffer> {
@@ -103,8 +106,8 @@ export async function loadPhysicsTextures(
   onProgress: (fraction: number) => void,
 ): Promise<PhysicsTextures> {
   const base = `${import.meta.env.BASE_URL}assets`;
-  const weights = [0.94, 0.03, 0.01, 0.02] as const;
-  const progress = [0, 0, 0, 0];
+  const weights = [0.82, 0.02, 0.01, 0.05, 0.1] as const;
+  const progress = [0, 0, 0, 0, 0];
   const update = (index: number, fraction: number) => {
     progress[index] = fraction;
     onProgress(progress.reduce((sum, item, itemIndex) => sum + item * (weights[itemIndex] ?? 0), 0));
@@ -112,12 +115,16 @@ export async function loadPhysicsTextures(
 
   const loadingManager = new LoadingManager();
   const textureLoader = new TextureLoader(loadingManager);
-  const [deflectionData, inverseData, blackBodyData, noise] = await Promise.all([
+  const [deflectionData, inverseData, blackBodyData, noise, sky] = await Promise.all([
     fetchBuffer(`${base}/deflection.dat`, (value) => update(0, value)),
     fetchBuffer(`${base}/inverse_radius.dat`, (value) => update(1, value)),
     fetchBuffer(`${base}/black_body.dat`, (value) => update(2, value)),
     textureLoader.loadAsync(`${base}/noise_texture.png`).then((texture) => {
       update(3, 1);
+      return texture;
+    }),
+    textureLoader.loadAsync(`${base}/milky-way.webp`).then((texture) => {
+      update(4, 1);
       return texture;
     }),
   ]);
@@ -131,11 +138,21 @@ export async function loadPhysicsTextures(
   noise.generateMipmaps = true;
   noise.needsUpdate = true;
 
+  sky.name = "ESO Milky Way panorama";
+  sky.colorSpace = SRGBColorSpace;
+  sky.wrapS = RepeatWrapping;
+  sky.wrapT = ClampToEdgeWrapping;
+  sky.minFilter = LinearMipmapLinearFilter;
+  sky.magFilter = LinearFilter;
+  sky.generateMipmaps = true;
+  sky.needsUpdate = true;
+
   onProgress(1);
   return {
     deflection: lookupTexture(deflectionData, "Schwarzschild ray deflection"),
     inverseRadius: lookupTexture(inverseData, "Schwarzschild inverse radius"),
     blackBody: blackBodyTexture(blackBodyData),
     noise,
+    sky,
   };
 }

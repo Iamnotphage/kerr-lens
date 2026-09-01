@@ -6,6 +6,7 @@ const expected = {
   "public/assets/inverse_radius.dat": "7fa22a9270e61f2842c97fb1a9398bcb13e1a965ad39b0f73169354a0d608b04",
   "public/assets/black_body.dat": "aac8ed78dde66d9b44da8b65142429470c89b5edeb74a8fde8dfc000777a2d97",
   "public/assets/noise_texture.png": "7ba6d84ad14496b6299b57dbbc75b400fad4e9ab022dcacfc7f3fa3751009ed9",
+  "public/assets/milky-way.webp": "7616eaf775537159bddef8ab7b5ebb3bb5b2e1c6c9c908cffd0b95512d9596ab",
 };
 
 // Catch accidental changes to scientific inputs before they reach the GPU.
@@ -23,4 +24,4 @@ if (inverseRadius.readFloatLE(0) !== 64 || inverseRadius.readFloatLE(4) !== 32) 
   throw new Error("inverse_radius.dat must be a 64×32 RG32F table");
 }
 
-console.log(`Verified ${Object.keys(expected).length} physics assets.`);
+console.log(`Verified ${Object.keys(expected).length} render assets.`);

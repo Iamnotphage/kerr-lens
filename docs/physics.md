@@ -79,6 +79,10 @@ which combines gravitational redshift and orbital Doppler shift. Since `I_ν/ν�
 
 The animated density filaments are procedural and are advected with the Schwarzschild Keplerian angular-rate dependence `Ω ∝ r^{-3/2}`. They provide spatial detail; they are not a fluid or GRMHD simulation.
 
+## Celestial background
+
+Escaped rays sample an equirectangular ESO/S. Brunier Milky Way panorama, so the same Schwarzschild geodesic mapping lenses the background and the disk. The panorama supplies visual context only: its orientation is presentational, and it is not a Gaia-calibrated astrometric or photometric sky model.
+
 ## Display pipeline
 
 The shader returns linear HDR radiance. User exposure, an ACES-style curve, and linear-sRGB conversion map it onto an ordinary display. These steps preserve relative physical effects but do not define an absolute astronomical exposure.

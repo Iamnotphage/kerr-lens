@@ -13,7 +13,10 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   await expect(page.locator("#scene")).toBeVisible();
   await expect(page.locator("#fps")).not.toHaveText(/--/);
   await expect(page.locator("#render-scale")).toContainText("×");
+  await expect(page.locator("#toggle-panel")).toHaveAttribute("aria-expanded", "false");
 
+  await page.locator("#toggle-panel").click();
+  await expect(page.locator("#toggle-panel")).toHaveAttribute("aria-expanded", "true");
   await page.locator("#inclination").fill("42");
   await expect(page.locator("#inclination-value")).toHaveText("42°");
   await page.locator("#doppler-enabled").uncheck({ force: true });
@@ -23,6 +26,8 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   await page.locator("#reset-view").click();
   await expect(page.locator("#inclination-value")).toHaveText("68°");
   await expect(page.locator("#distance-value")).toHaveText("26.0 rₛ");
+  await page.locator("#toggle-panel").click();
+  await expect(page.locator("#toggle-panel")).toHaveAttribute("aria-expanded", "false");
 
   const canvasBounds = await page.locator("#scene").boundingBox();
   expect(canvasBounds?.width).toBeGreaterThan(600);

@@ -65,7 +65,7 @@ Distances use the Schwarzschild radius, `r_s = 2GM/c²`, as the unit. In V1:
 - Render resolution drops temporarily during interaction.
 - Adaptive mode targets 60 fps using an exponential moving average of frame time.
 - Device pixel ratio is capped to avoid accidental 4K-class rendering on dense displays.
-- Static star positions are generated once and sampled as a mipmapped texture.
+- A 2048×1024 Milky Way panorama is loaded once and sampled as a mipmapped texture (284 KiB compressed).
 
 See [docs/performance.md](docs/performance.md) for budgets and measurement rules.
 
@@ -76,7 +76,7 @@ V1 is a physically grounded renderer of a specific model, not a prediction of on
 - Light propagation follows Schwarzschild null geodesics up to lookup-table interpolation error.
 - The disk is geometrically and optically thin and begins at the Schwarzschild ISCO.
 - Disk temperature follows the standard zero-torque radial profile, while small-scale density texture is procedural.
-- The background star positions are procedural, not Gaia data.
+- The background is an ESO photographic panorama for visual context, not a Gaia-calibrated astrometric or photometric dataset.
 - The star-texture filtering does not implement the full ray-bundle magnification filter from DNGR.
 - Exposure and tone mapping are display choices; absolute brightness depends on mass, accretion rate, wavelength band, and instrument.
 - V1 has no spin, frame dragging, polarization, volumetric transfer, magnetic field, or GRMHD flow.
@@ -92,4 +92,4 @@ These boundaries are intentional and visible in [docs/physics.md](docs/physics.m
 
 ## Attribution and license
 
-The project source is MIT licensed. The beam-tracing functions and precomputed assets are adapted from [Eric Bruneton's BSD-3-Clause project](https://github.com/ebruneton/black_hole_shader). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the complete notice.
+The project source is MIT licensed. The beam-tracing functions and precomputed assets are adapted from [Eric Bruneton's BSD-3-Clause project](https://github.com/ebruneton/black_hole_shader). The Milky Way panorama is credited to ESO/S. Brunier and used under CC BY 4.0. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the complete notices.

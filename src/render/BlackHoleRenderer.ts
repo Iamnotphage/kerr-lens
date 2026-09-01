@@ -18,7 +18,6 @@ import fragmentShader from "../shaders/black-hole.frag.glsl?raw";
 import vertexShader from "../shaders/fullscreen.vert.glsl?raw";
 import type { ObserverState } from "./ObserverController";
 import type { PhysicsTextures } from "./loadPhysicsTextures";
-import { createSkyTexture } from "./createSkyTexture";
 
 export interface RendererSettings {
   temperature: number;
@@ -69,7 +68,6 @@ export class BlackHoleRenderer {
     this.renderer.debug.checkShaderErrors = true;
     this.renderer.setClearColor(0x02040a, 1);
 
-    const skyTexture = createSkyTexture();
     this.material = new RawShaderMaterial({
       glslVersion: GLSL3,
       vertexShader,
@@ -92,7 +90,7 @@ export class BlackHoleRenderer {
         uInverseRadiusTexture: { value: physicsTextures.inverseRadius },
         uBlackBodyTexture: { value: physicsTextures.blackBody },
         uNoiseTexture: { value: physicsTextures.noise },
-        uSkyTexture: { value: skyTexture },
+        uSkyTexture: { value: physicsTextures.sky },
         uTime: { value: 0 },
         uExposure: { value: settings.exposure },
         uDiskTemperature: { value: settings.temperature },
