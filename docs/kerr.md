@@ -190,10 +190,12 @@ The transfer map therefore always supplies its last finite sky direction: rays t
 linger near the photon region beyond the fixed step budget cannot turn into a false
 black halo outside the exact curve.
 
-Because ordinary rays now turn at their physical Carter roots, the display shader can
-sample the transfer attachments directly. It does not blur or reconstruct screen axes,
-so thin-disk caustics retain their native map resolution without exposing the coordinate
-chart as horizontal or vertical image cuts.
+Ordinary rays now turn at their physical Carter roots. The only remaining singular
+footprint is the sub-pixel spin-axis family, which a finite transfer map can undersample.
+The display shader therefore reconstructs only narrow horizontal and vertical chart
+footprints from samples on both sides. The polar footprint expands mildly for a nearly
+face-on camera and contracts above 32 degrees; all other pixels retain one sample per
+transfer attachment, and thin-disk caustics keep their native map resolution.
 
 ## Exact critical curve
 
