@@ -2,7 +2,7 @@
 
 A performance-first, physically grounded black-hole renderer for the web.
 
-Version 1.2 renders a non-rotating Schwarzschild black hole with a physically normalized Novikov–Thorne/Page–Thorne thermal disk. The project name reflects the destination: a validated Kerr renderer. Schwarzschild is the zero-spin (`a* = 0`) member of that family.
+Version 1.2.1 renders a non-rotating Schwarzschild black hole with two explicitly separated disk presentations: a physically normalized Novikov–Thorne/Page–Thorne thermal disk and a default DNGR-inspired cinematic preset. The project name reflects the destination: a validated Kerr renderer. Schwarzschild is the zero-spin (`a* = 0`) member of that family.
 
 ## Why this is different
 
@@ -13,7 +13,7 @@ For every pixel, the shader:
 1. constructs a ray in a static observer's Schwarzschild tetrad;
 2. obtains its geodesic deflection and disk intersections from validated lookup tables;
 3. maps the escaped ray onto the celestial sphere;
-4. samples the exact Schwarzschild Page–Thorne flux profile, precomputed into a 256-point texture;
+4. samples either an exact Schwarzschild Page–Thorne flux profile or the clearly labelled 4500 K cinematic material;
 5. applies gravitational plus orbital Doppler frequency shift at emission; and
 6. converts HDR radiance to the display with an explicit exposure and ACES-style tone map.
 
@@ -43,9 +43,10 @@ exercises the controls, and saves a rendered screenshot as a workflow artifact.
 
 - Drag to orbit the observer while keeping the black hole centered.
 - Scroll to change the observer radius.
+- Switch between the default cinematic presentation and the scientific Page–Thorne disk.
 - Adjust inclination, distance, black-hole mass, Eddington luminosity ratio, and display exposure.
 - Peak effective and color temperatures are derived outputs, not artistic temperature controls.
-- Toggle the disk, relativistic frequency shift, background sky, and animation.
+- Toggle the disk, relativistic frequency shift, background sky, and animation. The cinematic preset disables frequency shift by default, matching the final film presentation; the scientific preset enables it.
 - Select adaptive, performance, balanced, or high-fidelity render resolution.
 
 Mass and Eddington ratio are logarithmic controls spanning `10⁷–10¹⁰ M☉` and `0.01–0.316 L_Edd`. Distances use the Schwarzschild radius, `r_s = 2GM/c²`, as the unit. In V1.2:
@@ -64,7 +65,7 @@ Mass and Eddington ratio are logarithmic controls spanning `10⁷–10¹⁰ M☉
 - Constant-time beam tracing through two small floating-point lookup textures.
 - A single render pass with no mandatory bloom chain.
 - The radial Page–Thorne temperature calculation is precomputed once into a 1 KiB `R32F` profile.
-- Subtle surface structure uses two cached noise samples per visible disk hit; there is no particle loop.
+- Both materials share two cached noise samples per visible disk hit; there is no particle loop. The cinematic material maps the same field to emissivity and optical depth, so it adds no texture fetches.
 - High-performance WebGL context and no MSAA.
 - Render resolution drops temporarily during interaction.
 - Adaptive mode targets 60 fps using an exponential moving average of frame time.
@@ -75,13 +76,16 @@ See [docs/performance.md](docs/performance.md) for budgets and measurement rules
 
 ## Scientific scope and limitations
 
-V1 is a physically grounded renderer of a specific model, not a prediction of one named astronomical object.
+V1 is a physically grounded renderer of a specific model, not a prediction of one named astronomical object. Its two appearance modes are intentionally labelled because they answer different questions.
+
+- **Scientific · NT** uses the Page–Thorne temperature profile, color hardening, relativistic frequency shift, and an optically thick photosphere.
+- **Cinematic · DNGR** keeps the same Schwarzschild geodesics but uses an art-directed 4500 K, marginal-optical-depth surface, an 85° default view, stronger procedural structure, and no frequency shift by default. It is inspired by the documented production choices for *Interstellar* and is not presented as an accretion-flow prediction.
 
 - Light propagation follows Schwarzschild null geodesics up to lookup-table interpolation error.
 - The disk is geometrically thin but optically thick and begins at the Schwarzschild ISCO.
 - The one-face surface flux is the relativistic zero-torque Page–Thorne solution. Mass and `L/L_Edd` determine its effective-temperature normalization using the exact zero-spin efficiency `1 - √(8/9) = 5.719%`.
 - A fixed scattering-atmosphere hardening factor `f_col = 1.7` uses the diluted-blackbody spectrum `f_col⁻⁴ Bν(f_col T_eff)`.
-- V1.2 treats procedural motion as a subtle surface-brightness perturbation only. It does not alter opacity or temperature and is not a fluid/GRMHD simulation.
+- Scientific mode treats procedural motion as a surface-brightness perturbation only. Cinematic mode also maps it to optical depth for visible wisps. Neither mode is a fluid/GRMHD simulation.
 - The rendered disk is a finite `3–12 r_s` window of a much larger physical disk. Its outer fade is a presentation boundary.
 - The background is an ESO photographic panorama for visual context, not a Gaia-calibrated astrometric or photometric dataset.
 - The star-texture filtering does not implement the full ray-bundle magnification filter from DNGR.
@@ -95,6 +99,7 @@ These boundaries are intentional and visible in [docs/physics.md](docs/physics.m
 - **V1 — Schwarzschild:** constant-time beam tracing, relativistic thin disk, performance governor, analytic anchors.
 - **V1.1 — accretion flow:** seamless domain-warped turbulence, differential rotation, and coupled thermal/opacity structure without particles or additional passes.
 - **V1.2 — physical thermal disk:** exact Schwarzschild Page–Thorne flux, mass/accretion normalization, color hardening, and an optically thick surface material.
+- **V1.2.1 — appearance calibration:** separate scientific and DNGR-inspired cinematic materials without particles or another render pass.
 - **V1.3 — validation:** golden-image comparisons against the reference renderer and browser GPU benchmarks.
 - **V2 — Kerr:** spin-dependent horizon, photon region and ISCO; Kerr null geodesics; frame dragging.
 - **V3 — radiative transfer:** optically thin volume emission/absorption and optional scientific datasets.

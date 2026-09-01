@@ -58,6 +58,7 @@ uniform float uTime;
 uniform float uExposure;
 uniform float uDiskPeakTemperature;
 uniform float uSpectralDilution;
+uniform int uDiskAppearance;
 uniform int uDiskEnabled;
 uniform int uDopplerEnabled;
 uniform int uSkyEnabled;
@@ -245,14 +246,17 @@ float diskBrightnessStructure(float radius, float angle, float coordinateTime) {
   float omega = sqrt(0.5 / (radius * radius * radius));
   float phase = angle - coordinateTime * omega;
 
-  // A continuous disk-plane field prevents radial bands. Two samples add only
-  // low-contrast surface structure; they do not alter opacity or temperature.
-  float spiralPhase = phase + 1.2 * log(radius / INNER_DISK_RADIUS);
+  // Keep the field continuous in the disk plane so the detail moves with the
+  // orbit instead of forming screen-space rings. Both appearance modes share
+  // these two samples; the cinematic mode simply maps them to a wider optical-
+  // depth range.
+  float spiralPhase = phase + 1.35 * log(radius / INNER_DISK_RADIUS);
   vec2 flowPosition = radius * vec2(cos(spiralPhase), sin(spiralPhase));
-  vec2 broadUv = flowPosition * 0.12;
+  vec2 broadUv = flowPosition * 0.105;
   float broad = texture(uNoiseTexture, broadUv + vec2(0.37, 0.71)).r;
-  float fine = texture(uNoiseTexture, broadUv * 3.4 + vec2(0.13, 0.47)).r;
-  return smoothstep(0.12, 0.9, mix(broad, fine, 0.32));
+  float fine = texture(uNoiseTexture, broadUv * 3.65 + vec2(0.13, 0.47)).r;
+  float filament = 0.5 + 0.5 * sin(2.8 * spiralPhase + 4.2 * (broad - 0.5));
+  return smoothstep(0.2, 0.82, 0.52 * broad + 0.34 * fine + 0.14 * filament);
 }
 
 vec4 diskColor(vec2 position, float coordinateTime, float shiftFactor) {
@@ -265,9 +269,25 @@ vec4 diskColor(vec2 position, float coordinateTime, float shiftFactor) {
   float edge = smoothstep(INNER_DISK_RADIUS, INNER_DISK_RADIUS * 1.03, radius) *
     (1.0 - smoothstep(OUTER_DISK_RADIUS * 0.91, OUTER_DISK_RADIUS, radius));
   float shift = uDopplerEnabled == 1 ? clamp(shiftFactor, 0.18, 4.0) : 1.0;
+
+  if (uDiskAppearance == 1) {
+    // DNGR-inspired presentation preset. Interstellar's art-directed disk was
+    // held at 4500 K and described as marginally optically thick. A rational
+    // optical-depth map preserves translucent wisps without an exp() or extra
+    // texture fetch, and the RGB value remains premultiplied for compositing.
+    float radialPosition = (radius - INNER_DISK_RADIUS) /
+      (OUTER_DISK_RADIUS - INNER_DISK_RADIUS);
+    float density = pow(structure, 1.35);
+    float opticalDepth = mix(0.12, 1.9, density) * mix(1.08, 0.62, radialPosition) * edge;
+    float opacity = opticalDepth / (1.0 + opticalDepth);
+    float brightness = mix(0.22, 1.55, density) * mix(1.08, 0.72, radialPosition);
+    vec3 radiance = blackBodyRadiance(4500.0 * shift) * 35.0 * brightness;
+    return vec4(radiance * opacity, opacity);
+  }
+
   float temperature = uDiskPeakTemperature * diskTemperatureProfile(radius) * shift;
-  float brightness = mix(0.92, 1.08, structure);
-  vec3 radiance = blackBodyRadiance(temperature) * uSpectralDilution * brightness;
+  float brightness = mix(0.74, 1.18, structure);
+  vec3 radiance = blackBodyRadiance(temperature) * uSpectralDilution * brightness * 0.58;
   // The thermal thin disk is an optically thick photosphere: texture controls
   // surface brightness only, while alpha remains one away from its finite edge.
   return vec4(radiance * edge, edge);

@@ -19,10 +19,13 @@ import vertexShader from "../shaders/fullscreen.vert.glsl?raw";
 import type { ObserverState } from "./ObserverController";
 import type { PhysicsTextures } from "./loadPhysicsTextures";
 
+export type DiskAppearance = "cinematic" | "scientific";
+
 export interface RendererSettings {
   peakColorTemperature: number;
   spectralDilution: number;
   exposure: number;
+  diskAppearance: DiskAppearance;
   diskEnabled: boolean;
   dopplerEnabled: boolean;
   skyEnabled: boolean;
@@ -97,6 +100,7 @@ export class BlackHoleRenderer {
         uExposure: { value: settings.exposure },
         uDiskPeakTemperature: { value: settings.peakColorTemperature },
         uSpectralDilution: { value: settings.spectralDilution },
+        uDiskAppearance: { value: settings.diskAppearance === "cinematic" ? 1 : 0 },
         uDiskEnabled: { value: settings.diskEnabled ? 1 : 0 },
         uDopplerEnabled: { value: settings.dopplerEnabled ? 1 : 0 },
         uSkyEnabled: { value: settings.skyEnabled ? 1 : 0 },
@@ -138,6 +142,9 @@ export class BlackHoleRenderer {
     }
     if (settings.spectralDilution !== undefined) {
       this.material.uniforms.uSpectralDilution!.value = settings.spectralDilution;
+    }
+    if (settings.diskAppearance !== undefined) {
+      this.material.uniforms.uDiskAppearance!.value = settings.diskAppearance === "cinematic" ? 1 : 0;
     }
     if (settings.exposure !== undefined) this.material.uniforms.uExposure!.value = settings.exposure;
     if (settings.diskEnabled !== undefined) this.material.uniforms.uDiskEnabled!.value = settings.diskEnabled ? 1 : 0;
