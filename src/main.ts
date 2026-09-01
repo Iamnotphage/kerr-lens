@@ -387,14 +387,15 @@ async function start(): Promise<void> {
   }, 520);
 
   const renderFrame = (now: number): void => {
-    const deltaMs = Math.min(now - lastFrame, 100);
+    const rawDeltaMs = now - lastFrame;
+    const deltaMs = Math.min(rawDeltaMs, 100);
     lastFrame = now;
     const snapshot = governor.update(deltaMs, now);
 
     if (Math.abs(snapshot.scale - appliedScale) >= 0.025) applySize(snapshot.scale);
     blackHole.render(deltaMs / 1000, observer);
     if (benchmarkMode && benchmarkProgress.phase !== "complete") {
-      benchmarkProgress = frameBenchmark.record(deltaMs);
+      benchmarkProgress = frameBenchmark.record(rawDeltaMs);
     }
 
     if (now - lastHudUpdate > 300) {

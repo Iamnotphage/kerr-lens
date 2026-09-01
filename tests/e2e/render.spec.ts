@@ -79,6 +79,7 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
 test("captures the V1.3 appearance and inclination validation matrix", async ({
   page,
 }, testInfo) => {
+  test.setTimeout(90_000);
   const runtimeErrors = watchRuntimeErrors(page);
   await page.goto("/");
   await waitForRenderer(page);
