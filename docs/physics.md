@@ -144,6 +144,7 @@ V1.2.1 exposes the scientific material above as **Scientific · NT** and adds a 
 
 - the default inclination is `85°`, close to the `86.56°` camera used in the DNGR paper's disk examples;
 - the source spectrum is held at `4500 K` instead of using the Page–Thorne radial temperature profile;
+- a constant RGB gain `(1.08, 0.99, 0.91)` applies a mild warm display grade while preserving Rec.709 weighted luminance to within approximately `0.3%`;
 - a two-sample procedural field controls both emissivity and a marginal optical depth, approximated as `α = τ/(1+τ)`; and
 - relativistic frequency shift is disabled by default but remains available as a toggle.
 

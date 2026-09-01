@@ -74,6 +74,8 @@ const int INVERSE_RADIUS_WIDTH = 64;
 const int INVERSE_RADIUS_HEIGHT = 32;
 const int DISK_TEMPERATURE_WIDTH = 256;
 const float BLACK_BODY_TABLE_MAX_TEMPERATURE = 39408.3376;
+// Mild, nearly luminance-neutral film grade: Rec.709 weighted gain ≈ 1.003.
+const vec3 CINEMATIC_WARM_GRADE = vec3(1.08, 0.99, 0.91);
 
 float unitTextureCoordinate(float value, int size) {
   return 0.5 / float(size) + value * (1.0 - 1.0 / float(size));
@@ -289,7 +291,8 @@ vec4 diskColor(vec2 position, float coordinateTime, float shiftFactor) {
     float opticalDepth = mix(0.12, 1.9, density) * mix(1.08, 0.62, radialPosition) * edge;
     float opacity = opticalDepth / (1.0 + opticalDepth);
     float brightness = mix(0.22, 1.55, density) * mix(1.08, 0.72, radialPosition);
-    vec3 radiance = blackBodyRadiance(4500.0 * shift) * 35.0 * brightness;
+    vec3 radiance = blackBodyRadiance(4500.0 * shift) *
+      CINEMATIC_WARM_GRADE * 35.0 * brightness;
     return vec4(radiance * opacity, opacity);
   }
 
