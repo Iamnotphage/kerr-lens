@@ -2,7 +2,7 @@
 
 Kerr Lens treats frame time as a feature, not a cleanup task.
 
-## V1 render budget
+## Steady-state render budget
 
 The default target is 60 frames per second on an integrated laptop GPU at a balanced internal resolution. A frame should remain within approximately 16.7 ms after shader warm-up. Device, browser, thermal state, and display resolution must accompany every reported result.
 
@@ -12,7 +12,7 @@ The render path is deliberately bounded:
 - one full-screen triangle;
 - no depth/stencil attachment;
 - no MSAA;
-- no per-ray integration loop;
+- no per-ray integration loop in an animation frame;
 - fixed lookup count for lensing and disk intersection;
 - at most two disk-shading evaluations;
 - one cached Page–Thorne profile lookup and two small, mipmapped noise samples per visible disk hit;
@@ -79,6 +79,28 @@ of shear. Their 97-epoch sequence repeats
 exactly, so the CPU wraps only the GPU flow clock every 1,164 simulation units and avoids
 long-running `highp` phase loss without a visible reset. Use the matched-device 5%
 median/p95 rule above when judging the added sampling cost.
+
+## V2.1 cached Kerr transfer
+
+V2.1 does not run a Kerr integrator for every display pixel on every frame. Non-zero
+spin uses a three-attachment `RGBA16F` transfer target whose long edge is 512 pixels on
+a physical GPU and 224 pixels on a detected software renderer. It stores the escaped sky
+direction and the first two ordered equatorial-disk intersections. A 512-sample `R32F`
+polar profile independently evaluates the finite-observer Kerr critical curve so its edge
+is not limited by the lower-resolution transfer target.
+
+Changing spin, inclination, observer radius, or viewport aspect invalidates the map. The
+renderer waits 55 ms for a stream of input events to settle, performs one offscreen MRT
+draw with a fixed 224-step Carter integrator, then returns to the steady-state contract:
+
+- one display draw call and one full-screen triangle;
+- three coherent transfer samples plus one one-dimensional shadow sample;
+- no geodesic loop, CPU upload, or map allocation per animation frame; and
+- approximately 3.4 MiB for a 512×288 three-attachment transfer map, plus 2 KiB for the critical-curve profile.
+
+Map rebuild latency and steady-state frame time are separate measurements. The exported
+benchmark begins after shader warm-up and the initial Kerr map build, so median/p95/p99
+describe the animation path rather than a parameter-edit event.
 
 ## Future work
 

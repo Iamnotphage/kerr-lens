@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta
       name="description"
-      content="A performance-first Kerr black-hole framework with validated Schwarzschild lensing for the web."
+      content="Performance-first Kerr null-geodesic lensing and a relativistic thin disk for the web."
     />
     <meta name="theme-color" content="#03050a" />
-    <title>Kerr Lens — Kerr Framework V2.0.1</title>
+    <title>Kerr Lens — Kerr Lensing V2.1</title>
   </head>
   <body>
     <main id="app">
-      <canvas id="scene" aria-label="Interactive Kerr parameter visualization with Schwarzschild ray tracing"></canvas>
+      <canvas id="scene" aria-label="Interactive Kerr black hole with null-geodesic ray tracing"></canvas>
 
       <div class="vignette" aria-hidden="true"></div>
 
@@ -21,15 +21,15 @@
           <span class="brand__dot" aria-hidden="true"></span>
           KERR LENS
         </a>
-        <span class="brand__version">KERR FRAMEWORK / V2.0.1</span>
-        <span class="brand__spin" id="brand-spin">a* 0.000</span>
+        <span class="brand__version">KERR LENSING / V2.1</span>
+        <span class="brand__spin" id="brand-spin">a* +0.800</span>
       </header>
 
       <section class="hero-copy" aria-label="Visualization summary">
         <p class="eyebrow" id="hero-eyebrow">DNGR-INSPIRED CINEMATIC DISK</p>
         <h1>Light follows<br /><em>curved spacetime.</em></h1>
         <p class="hero-copy__detail" id="hero-detail">
-          Schwarzschild geodesics lens a warm, marginally opaque 4500&nbsp;K presentation disk.
+          Kerr null geodesics lens a warm, marginally opaque 4500&nbsp;K presentation disk.
         </p>
       </section>
 
@@ -37,7 +37,7 @@
         <div class="panel__header">
           <div>
             <p class="eyebrow">SPACETIME &amp; MATERIAL</p>
-            <h2>Kerr framework</h2>
+            <h2>Kerr lensing</h2>
           </div>
           <button class="icon-button" id="toggle-panel" type="button" aria-label="Expand controls" aria-expanded="false">
             <span></span><span></span>
@@ -47,15 +47,15 @@
         <div class="panel__body" id="panel-body">
           <div class="spacetime-status" id="spacetime-status" data-spin-sense="schwarzschild">
             <span>KERR METRIC PARAMETERS</span>
-            <strong id="spacetime-status-title">EXACT SCHWARZSCHILD LIMIT</strong>
-            <small>V2.0 computes spin-dependent invariants. Image rays remain Schwarzschild until V2.1.</small>
+            <strong id="spacetime-status-title">PROGRADE KERR LENSING</strong>
+            <small>V2.1 traces Carter-separated Kerr rays into a cached finite-observer transfer map.</small>
           </div>
 
           <div class="control control--spin">
             <div class="control__label"><label for="spin">Dimensionless spin a*</label><output id="spin-value">0.000</output></div>
-            <input id="spin" type="range" min="-0.998" max="0.998" step="0.001" value="0" />
+            <input id="spin" type="range" min="-0.998" max="0.998" step="0.001" value="0.8" />
           </div>
-          <p class="spin-note" id="spin-note">Zero spin · Kerr and Schwarzschild parameter sets coincide exactly.</p>
+          <p class="spin-note" id="spin-note">Spin aligned with disk orbit · frame dragging shifts the critical curve with the flow.</p>
 
           <div class="control control--select control--appearance">
             <label for="disk-appearance">Disk appearance</label>
@@ -65,7 +65,7 @@
             </select>
           </div>
           <p class="appearance-note" id="appearance-note">
-            4500 K source with a mild warm film grade; geodesic lensing remains physical.
+            4500 K source with a mild warm film grade; light follows the active Kerr lens map.
           </p>
 
           <div class="control">
@@ -146,7 +146,7 @@
       </div>
 
       <section class="benchmark-panel" id="benchmark-panel" data-state="idle" hidden>
-        <p class="eyebrow">V2.0.1 VALIDATION MODE</p>
+        <p class="eyebrow">V2.1 VALIDATION MODE</p>
         <h2>Fixed-scene frame benchmark</h2>
         <p id="benchmark-phase">Preparing shader and assets</p>
         <div class="benchmark-grid">
@@ -175,7 +175,7 @@
       <div class="fatal-error" id="fatal-error" hidden>
         <p class="eyebrow">RENDERER UNAVAILABLE</p>
         <h2>WebGL 2 is required.</h2>
-        <p id="fatal-error-detail">This browser or GPU cannot run the Schwarzschild renderer.</p>
+        <p id="fatal-error-detail">This browser or GPU cannot run the Kerr renderer.</p>
       </div>
     </main>
     <script type="module" src="/src/main.ts"></script>

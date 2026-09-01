@@ -2,13 +2,13 @@
 
 A performance-first, physically grounded black-hole renderer for the web.
 
-Version 2.0 adds a tested Kerr parameter framework to the numerically validated Schwarzschild image renderer. A signed spin control computes the horizons, ergosphere, disk-aligned photon orbit and ISCO, orbital frequency, and Novikov–Thorne efficiency. The image ray tracing and emitting disk deliberately remain Schwarzschild until V2.1 and V2.2 respectively; V2.0 does not fake rotation by spinning a sphere or texture. V2.0.1 gives the procedural turbulence a finite correlation time so differential rotation cannot wind a frozen texture into artificial concentric rings.
+Version 2.1 makes signed Kerr spin part of the image. A finite-radius ZAMO camera launches rays into a cached, Carter-separated Kerr geodesic map; the exact Kerr critical curve remains sharp at display resolution while frame dragging changes the background and thin-disk intersections. `a* = 0` still selects the original validated Schwarzschild lookup path exactly. V2.0.1's finite-coherence turbulence remains in place, so differential rotation cannot wind a frozen texture into artificial concentric rings.
 
 ## Why this is different
 
 Most browser black-hole demos bend a straight ray with an inverse-square force or distort the finished image in screen space. Kerr Lens V1 instead uses the precomputed beam-tracing method from Eric Bruneton's 2020 paper, [*Real-time High-Quality Rendering of Non-Rotating Black Holes*](https://arxiv.org/abs/2010.08735).
 
-For every pixel, the shader:
+At `a* = 0`, every display pixel follows the original constant-time Schwarzschild path:
 
 1. constructs a ray in a static observer's Schwarzschild tetrad;
 2. obtains its geodesic deflection and disk intersections from validated lookup tables;
@@ -17,7 +17,12 @@ For every pixel, the shader:
 5. applies gravitational plus orbital Doppler frequency shift at emission; and
 6. converts HDR radiance to the display with an explicit exposure and ACES-style tone map.
 
-The geodesic query has constant cost per pixel. There is no 64–1024 iteration ray-march loop in the render path.
+For non-zero spin, V2.1 constructs the arriving photon in a locally non-rotating
+observer tetrad, derives `E`, `Lz`, and Carter's `Q`, and integrates the separated
+Kerr equations into three compact transfer attachments. This map is regenerated only
+after spin, inclination, distance, or viewport aspect changes. Animation frames sample
+the cached sky and two ordered disk hits in constant time; the 224-step integration loop
+is not in the steady-state frame path.
 
 ## Run locally
 
@@ -50,7 +55,7 @@ p95, and p99 frame intervals with GPU and drawing-buffer metadata. Use
 - Drag to orbit the observer while keeping the black hole centered.
 - Scroll to change the observer radius.
 - Vary signed Kerr spin `a*` from `-0.998` (retrograde relative to the disk) to `+0.998` (prograde).
-- Inspect spin-derived horizon, ergosphere, photon-orbit, ISCO, efficiency, and horizon-angular-velocity values. These are parameter predictions in V2.0, not yet inputs to the image shader.
+- Inspect spin-derived horizon, ergosphere, photon-orbit, ISCO, efficiency, and horizon-angular-velocity values while the same signed spin drives the V2.1 lens map.
 - Switch between the default cinematic presentation and the scientific Page–Thorne disk.
 - Adjust inclination, distance, black-hole mass, Eddington luminosity ratio, and display exposure.
 - Peak effective and color temperatures are derived outputs, not artistic temperature controls.
@@ -68,8 +73,8 @@ Mass and Eddington ratio are logarithmic controls spanning `10⁷–10¹⁰ M☉
 ## Performance design
 
 - One oversized full-screen triangle; no scene meshes or depth buffer.
-- Constant-time beam tracing through two small floating-point lookup textures.
-- A single render pass with no mandatory bloom chain.
+- Constant-time steady-state shading through either the Schwarzschild tables or cached Kerr transfer map.
+- One display pass and draw call in steady state; a parameter change schedules one offscreen MRT map update.
 - The radial Page–Thorne temperature calculation is precomputed once into a 1 KiB `R32F` profile.
 - Both materials share two small, mipmapped noise samples per visible disk hit. Broad and fine turbulence are packed into separate texture channels, so two finite-age fields can be blended continuously without increasing the V2.0 sample count. There is no particle loop, extra pass, or extra draw call.
 - High-performance WebGL context and no MSAA.
@@ -90,7 +95,8 @@ V1 is a physically grounded renderer of a specific model, not a prediction of on
 - **Scientific · NT** uses the Page–Thorne temperature profile, color hardening, relativistic frequency shift, and an optically thick photosphere.
 - **Cinematic · DNGR** keeps the same Schwarzschild geodesics but uses an art-directed 4500 K, marginal-optical-depth surface, an 85° default view, stronger procedural structure, a mild luminance-neutral warm film grade, and no frequency shift by default. It is inspired by the documented production choices for *Interstellar* and is not presented as an accretion-flow prediction.
 
-- Light propagation follows Schwarzschild null geodesics up to lookup-table interpolation error.
+- At exactly zero spin, light propagation follows the original Schwarzschild null geodesics up to lookup-table interpolation error.
+- At non-zero spin, light propagation uses numerically integrated Carter-separated Kerr null geodesics. The finite transfer-map resolution and fixed integration budget are explicit approximation limits; a separately evaluated finite-observer Kerr critical curve keeps the shadow boundary sharp.
 - The disk is geometrically thin but optically thick and begins at the Schwarzschild ISCO.
 - The one-face surface flux is the relativistic zero-torque Page–Thorne solution. Mass and `L/L_Edd` determine its effective-temperature normalization using the exact zero-spin efficiency `1 - √(8/9) = 5.719%`.
 - A fixed scattering-atmosphere hardening factor `f_col = 1.7` uses the diluted-blackbody spectrum `f_col⁻⁴ Bν(f_col T_eff)`.
@@ -99,8 +105,7 @@ V1 is a physically grounded renderer of a specific model, not a prediction of on
 - The background is an ESO photographic panorama for visual context, not a Gaia-calibrated astrometric or photometric dataset.
 - The star-texture filtering does not implement the full ray-bundle magnification filter from DNGR.
 - Exposure and tone mapping are display choices; absolute brightness depends on mass, accretion rate, wavelength band, and instrument.
-- V2.0 computes Kerr invariants on the CPU but does not yet propagate spin through light rays or disk emission. The displayed image therefore still has no frame dragging or Kerr shadow asymmetry.
-- The V2.0 emitting surface still begins at the Schwarzschild ISCO. Moving the spin control changes the predicted Kerr readouts, not the image; spin-dependent disk emission begins in V2.2.
+- V2.1 propagates spin through the light rays and shadow, but the emitting surface still begins at the Schwarzschild ISCO. Spin-dependent Novikov–Thorne flux and the complete Kerr emitter four-velocity begin in V2.2.
 - Polarization, finite disk thickness, returning radiation, limb darkening, magnetic stress, and GRMHD flow remain out of scope.
 
 These boundaries are intentional and visible in [docs/physics.md](docs/physics.md).
@@ -113,7 +118,7 @@ These boundaries are intentional and visible in [docs/physics.md](docs/physics.m
 - **V1.2.1 — appearance calibration:** separate scientific and DNGR-inspired cinematic materials without particles or another render pass.
 - **V1.3 — validation:** independent CPU deflection oracle, six-view browser evidence matrix, and exportable frame-time distributions.
 - **V2.0 — Kerr framework:** tested spin-dependent horizons, ergosphere, equatorial photon orbits, ISCO, orbital frequency, and radiative efficiency, with an exact `a* = 0` Schwarzschild regression.
-- **V2.1 — Kerr lensing:** Kerr null geodesics and frame dragging in the image.
+- **V2.1 — Kerr lensing:** cached Kerr null geodesics, finite-observer critical curve, frame dragging, and signed-spin image regression.
 - **V2.2 — Kerr thin disk:** spin-dependent Novikov–Thorne emission and emitter frequency shift.
 
 EHT-style optically thin plasma and GRMHD rendering are intentionally outside the

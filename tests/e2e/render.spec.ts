@@ -16,6 +16,21 @@ async function waitForRenderer(page: Page): Promise<void> {
   await expect(page.locator("body")).toHaveAttribute("data-validation-ready", "true");
 }
 
+async function waitForKerrMap(page: Page, spin: number): Promise<void> {
+  await expect.poll(async () => {
+    return page.evaluate(() => {
+      const validationWindow = window as typeof window & {
+        __KERR_LENS_VALIDATION__?: {
+          getReport: () => {
+            gpu: { kerrLensing: { ready: boolean; spin: number } };
+          };
+        };
+      };
+      return validationWindow.__KERR_LENS_VALIDATION__?.getReport().gpu.kerrLensing;
+    });
+  }, { timeout: 30_000 }).toMatchObject({ ready: true, spin });
+}
+
 test("compiles the WebGL renderer and draws an interactive frame", async ({ page }, testInfo) => {
   const runtimeErrors = watchRuntimeErrors(page);
 
@@ -28,20 +43,23 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   await page.locator("#toggle-panel").click();
   await expect(page.locator("#toggle-panel")).toHaveAttribute("aria-expanded", "true");
   await expect(page.locator("#disk-appearance")).toHaveValue("cinematic");
-  await expect(page.locator("#spin-value")).toHaveText("0.000");
+  await expect(page.locator("#spin-value")).toHaveText("+0.800");
+  await expect(page.locator("#spacetime-status-title")).toHaveText("PROGRADE KERR LENSING");
+  await expect(page.locator("#kerr-horizon-value")).toHaveText("0.800 rₛ");
+  await page.locator("#spin").fill("0");
   await expect(page.locator("#spacetime-status-title")).toHaveText("EXACT SCHWARZSCHILD LIMIT");
   await expect(page.locator("#kerr-horizon-value")).toHaveText("1.000 rₛ");
   await expect(page.locator("#kerr-photon-value")).toHaveText("1.500 rₛ");
   await expect(page.locator("#kerr-isco-value")).toHaveText("3.000 rₛ");
   await page.locator("#spin").fill("0.9");
   await expect(page.locator("#spin-value")).toHaveText("+0.900");
-  await expect(page.locator("#spacetime-status-title")).toHaveText("PROGRADE KERR PARAMETERS");
+  await expect(page.locator("#spacetime-status-title")).toHaveText("PROGRADE KERR LENSING");
   await expect(page.locator("#kerr-horizon-value")).toHaveText("0.718 rₛ");
   await expect(page.locator("#kerr-isco-value")).toHaveText("1.160 rₛ");
   await expect(page.locator("#kerr-efficiency-value")).toHaveText("15.575%");
   await page.locator("#spin").fill("-0.9");
   await expect(page.locator("#spin-value")).toHaveText("-0.900");
-  await expect(page.locator("#spacetime-status-title")).toHaveText("RETROGRADE KERR PARAMETERS");
+  await expect(page.locator("#spacetime-status-title")).toHaveText("RETROGRADE KERR LENSING");
   await expect(page.locator("#kerr-isco-value")).toHaveText("4.359 rₛ");
   await page.locator("#spin").fill("0");
   await expect(page.locator("#spacetime-status-title")).toHaveText("EXACT SCHWARZSCHILD LIMIT");
@@ -82,7 +100,7 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   expect(canvasBounds?.height).toBeGreaterThan(400);
   expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
 
-  await page.screenshot({ path: testInfo.outputPath("kerr-lens-v2.0.1.png"), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath("kerr-lens-v2.1.png"), fullPage: true });
 
   // A near face-on view exposes any angular wrap discontinuity as a radial
   // wedge, so preserve it as explicit visual evidence in the CI artifact.
@@ -91,6 +109,34 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   await page.locator("#toggle-panel").click();
   await page.waitForTimeout(300);
   await page.screenshot({ path: testInfo.outputPath("disk-seam-probe.png"), fullPage: true });
+});
+
+test("renders distinct positive and negative Kerr lens maps", async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
+  const runtimeErrors = watchRuntimeErrors(page);
+  await page.goto("/");
+  await waitForRenderer(page);
+  await page.locator("#toggle-panel").click();
+  await page.locator("#paused").check({ force: true });
+  await page.locator("#quality").selectOption("balanced");
+
+  const captureAtSpin = async (spin: number, name: string): Promise<Buffer> => {
+    await page.locator("#spin").fill(String(spin));
+    if (spin !== 0) await waitForKerrMap(page, spin);
+    await page.evaluate(() => {
+      window.__KERR_LENS_VALIDATION__?.setSimulationTime(0);
+    });
+    await page.waitForTimeout(120);
+    return page.locator("#scene").screenshot({ path: testInfo.outputPath(name) });
+  };
+
+  const schwarzschild = await captureAtSpin(0, "lensing-spin-zero.png");
+  const prograde = await captureAtSpin(0.9, "lensing-spin-positive.png");
+  const retrograde = await captureAtSpin(-0.9, "lensing-spin-negative.png");
+  expect(prograde.equals(schwarzschild)).toBe(false);
+  expect(retrograde.equals(schwarzschild)).toBe(false);
+  expect(retrograde.equals(prograde)).toBe(false);
+  expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
 });
 
 test("keeps finite-coherence disk structure after long simulation times", async ({
@@ -188,9 +234,9 @@ test("exports a fixed-scene frame-time distribution", async ({ page }, testInfo)
   expect(result.gpu.renderer.length).toBeGreaterThan(0);
   expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
 
-  await testInfo.attach("benchmark-v2.0.1.json", {
+  await testInfo.attach("benchmark-v2.1.json", {
     body: JSON.stringify(report, null, 2),
     contentType: "application/json",
   });
-  await page.screenshot({ path: testInfo.outputPath("benchmark-v2.0.1.png"), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath("benchmark-v2.1.png"), fullPage: true });
 });

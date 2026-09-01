@@ -1,9 +1,8 @@
-# V2.0 Kerr parameter framework
+# Kerr parameter and V2.1 lensing model
 
-V2.0 introduces the rotating-vacuum spacetime as a tested CPU model. It intentionally
-does not alter the image shader yet. This keeps the scientific boundary explicit:
-the spin slider changes derived Kerr quantities, while the rendered rays remain the
-validated Schwarzschild rays until V2.1.
+V2.0 introduced the rotating-vacuum spacetime as a tested CPU model. V2.1 now
+propagates non-zero signed spin through a cached null-geodesic transfer map while
+preserving the validated Schwarzschild renderer as the exact `a* = 0` path.
 
 ## Units and sign convention
 
@@ -109,15 +108,95 @@ At zero spin, the implementation returns the existing Schwarzschild anchors exac
 `r_+ = 1 r_s`, `r_ph = 1.5 r_s`, `r_ISCO = 3 r_s`, and
 `eta = 1 - sqrt(8/9)`.
 
-## Version boundary
+## V2.1 observer and ray constants
+
+The non-zero-spin camera is a zero-angular-momentum observer (ZAMO) at finite
+Boyer–Lindquist radius. In standard `M = 1` units,
+
+\[
+\Sigma=r^2+a^2\cos^2\theta,\qquad
+\Delta=r^2-2r+a^2,
+\]
+
+\[
+A=(r^2+a^2)^2-a^2\Delta\sin^2\theta,
+\qquad
+\alpha=\sqrt{\frac{\Sigma\Delta}{A}},
+\qquad
+\omega=\frac{2ar}{A}.
+\]
+
+A normalized local screen ray is transformed through the ZAMO tetrad. Its
+future-directed counterpart supplies the conserved ratios
+
+\[
+\lambda=\frac{L_z}{E},\qquad \eta=\frac{Q}{E^2}.
+\]
+
+The fragment map then traces the same curve backward from the camera. This sign
+choice matters: reversing only the spatial vector rather than the complete null
+four-vector gives the wrong frame-dragging direction.
+
+## Carter-separated integration
+
+With Mino parameter `gamma`, the null equations are evaluated from
+
+\[
+P=r^2+a^2-a\lambda,
+\]
+
+\[
+R(r)=P^2-\Delta\left[(\lambda-a)^2+\eta\right],
+\]
+
+\[
+\Theta(\theta)=\eta+a^2\cos^2\theta-\lambda^2\cot^2\theta.
+\]
+
+The implementation integrates `r`, `mu = cos(theta)`, `phi`, and coordinate time.
+Using `mu` removes a sine/cosine pair from every step and gives the polynomial
+
+\[
+\left(\frac{d\mu}{d\gamma}\right)^2=
+\eta+(a^2-\eta-\lambda^2)\mu^2-a^2\mu^4.
+\]
+
+Radial and polar signs reverse only at their respective potential turning points.
+The first two valid crossings of `mu = 0` become ordered thin-disk intersections;
+an escaped ray stores its asymptotic sky direction. A fixed 224-step midpoint
+integrator runs only when the transfer map is invalidated, not in steady-state
+animation frames.
+
+## Exact critical curve
+
+For an unstable spherical photon orbit at `r` in `M` units, V2.1 independently
+evaluates
+
+\[
+\lambda(r)=\frac{r^2(r-3)+a^2(r+1)}{a(1-r)},
+\]
+
+\[
+\eta(r)=\frac{r^3\left[4a^2-r(r-3)^2\right]}
+{a^2(r-1)^2}.
+\]
+
+These constants are projected through the same finite-radius ZAMO tetrad and
+rasterized into a one-dimensional polar boundary texture. The display shader uses
+that profile for the capture boundary, while the two-dimensional geodesic map
+supplies continuous sky and disk coordinates. This prevents map interpolation from
+turning the shadow into a visibly soft or polygonal approximation.
+
+## V2.1 / V2.2 boundary
 
 - **V2.0:** CPU Kerr invariants, signed-spin UI, documentation, and regression tests.
-- **V2.1:** Kerr null geodesics, frame dragging, shadow displacement/asymmetry, and higher-order images.
+- **V2.1:** finite-observer Kerr null geodesics, frame dragging, exact critical curve, and cached disk/sky transfer.
 - **V2.2:** spin-dependent Novikov–Thorne flux, Kerr emitter four-velocity, redshift, Doppler beaming, and inner disk edge.
 
-Until V2.1, changing `a*` must not change the canvas. Until V2.2, it must not change
-the disk spectrum or inner edge. This is a deliberate guard against mixing a Kerr
-label with Schwarzschild ray paths.
+V2.1 intentionally retains the zero-spin Page–Thorne surface flux, `3 r_s` inner
+edge, and Schwarzschild circular emitter. The displayed frequency transfer combines
+the Kerr photon constants and ZAMO receiver with that existing emitter. V2.2 replaces
+this mixed, explicitly versioned boundary with the complete Kerr disk model.
 
 ## Primary references
 

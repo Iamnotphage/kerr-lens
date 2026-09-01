@@ -53,6 +53,10 @@ uniform sampler2D uBlackBodyTexture;
 uniform sampler2D uDiskTemperatureTexture;
 uniform sampler2D uNoiseTexture;
 uniform sampler2D uSkyTexture;
+uniform sampler2D uKerrSkyTexture;
+uniform sampler2D uKerrDiskHit0Texture;
+uniform sampler2D uKerrDiskHit1Texture;
+uniform sampler2D uKerrShadowTexture;
 
 uniform float uTime;
 uniform float uExposure;
@@ -62,6 +66,9 @@ uniform int uDiskAppearance;
 uniform int uDiskEnabled;
 uniform int uDopplerEnabled;
 uniform int uSkyEnabled;
+uniform int uKerrMapReady;
+uniform float uKerrSpin;
+uniform vec2 uKerrShadowCenter;
 
 const float PI = 3.14159265358979323846;
 const float TAU = 6.28318530717958647692;
@@ -356,7 +363,7 @@ vec4 diskColor(vec2 position, float coordinateTime, float shiftFactor) {
   return vec4(radiance * edge, edge);
 }
 
-vec3 sceneColor(vec3 viewDirection) {
+vec3 schwarzschildSceneColor(vec3 viewDirection) {
   vec3 q = normalize(viewDirection);
   vec3 photonDirection = -uCameraTimeAxis +
     q.x * uCameraRightAxis +
@@ -448,6 +455,101 @@ vec3 sceneColor(vec3 viewDirection) {
   return max(color, vec3(0.0));
 }
 
+vec3 rotateAroundSpinAxis(vec3 direction, float azimuth) {
+  float cosine = cos(azimuth);
+  float sine = sin(azimuth);
+  return vec3(
+    cosine * direction.x - sine * direction.y,
+    sine * direction.x + cosine * direction.y,
+    direction.z
+  );
+}
+
+float kerrScreenLambda(vec2 screen) {
+  float focalLength = 1.0 / tan(uFovY * 0.5);
+  vec3 backwardDirection = normalize(vec3(screen, -focalLength));
+  float radius = 2.0 * uCameraCoordinates.y;
+  float cosineTheta = cos(uCameraCoordinates.z);
+  float sineTheta = sin(uCameraCoordinates.z);
+  float spinSquared = uKerrSpin * uKerrSpin;
+  float sigma = radius * radius + spinSquared * cosineTheta * cosineTheta;
+  float delta = radius * radius - 2.0 * radius + spinSquared;
+  float area = (radius * radius + spinSquared) * (radius * radius + spinSquared) -
+    spinSquared * delta * sineTheta * sineTheta;
+  float lapse = sqrt(sigma * delta / area);
+  float frameDragging = 2.0 * uKerrSpin * radius / area;
+  float angularMomentum = -backwardDirection.x * sineTheta * sqrt(area / sigma);
+  return angularMomentum / (lapse + frameDragging * angularMomentum);
+}
+
+/**
+ * V2.1 keeps the V2.0 Schwarzschild circular emitter while replacing the ray
+ * constants and path with Kerr. V2.2 upgrades this mixed transfer factor to
+ * the complete Kerr circular four-velocity and spin-dependent disk edge.
+ */
+float v21FrequencyShift(float radiusRs, float lambda) {
+  float observerRadiusM = 2.0 * uCameraCoordinates.y;
+  float cosineTheta = cos(uCameraCoordinates.z);
+  float sineTheta = sin(uCameraCoordinates.z);
+  float spinSquared = uKerrSpin * uKerrSpin;
+  float sigma = observerRadiusM * observerRadiusM +
+    spinSquared * cosineTheta * cosineTheta;
+  float delta = observerRadiusM * observerRadiusM - 2.0 * observerRadiusM + spinSquared;
+  float area =
+    (observerRadiusM * observerRadiusM + spinSquared) *
+      (observerRadiusM * observerRadiusM + spinSquared) -
+    spinSquared * delta * sineTheta * sineTheta;
+  float lapse = sqrt(sigma * delta / area);
+  float frameDragging = 2.0 * uKerrSpin * observerRadiusM / area;
+  float observerEnergy = (1.0 - frameDragging * lambda) / lapse;
+
+  float emitterRadiusM = 2.0 * radiusRs;
+  float emitterTimeComponent = inversesqrt(max(1.0 - 3.0 / emitterRadiusM, 1e-4));
+  float emitterOmega = inversesqrt(emitterRadiusM * emitterRadiusM * emitterRadiusM);
+  float emitterEnergy = emitterTimeComponent * max(1.0 - emitterOmega * lambda, 0.04);
+  return observerEnergy / emitterEnergy;
+}
+
+vec3 kerrSceneColor(vec2 screen) {
+  vec2 transferUv = gl_FragCoord.xy / uResolution;
+  vec4 skyTransfer = texture(uKerrSkyTexture, transferUv);
+  vec2 shadowOffset = screen - uKerrShadowCenter;
+  float shadowAngle = atan(shadowOffset.y, shadowOffset.x) / TAU + 0.5;
+  float shadowRadius = texture(uKerrShadowTexture, vec2(shadowAngle, 0.5)).r;
+  float shadowDistance = length(shadowOffset) - shadowRadius;
+  float shadowFilter = max(fwidth(shadowDistance), 1e-5);
+  float outsideShadow = smoothstep(-shadowFilter, shadowFilter, shadowDistance);
+  float escaped = smoothstep(0.2, 0.8, skyTransfer.a) * outsideShadow;
+  vec3 sourceDirection = rotateAroundSpinAxis(
+    normalize(skyTransfer.xyz + vec3(0.0, 0.0, 1e-8)),
+    uCameraCoordinates.w
+  );
+  vec3 color = skyColor(sourceDirection) * escaped;
+
+  float lambda = kerrScreenLambda(screen);
+  vec4 hit1 = texture(uKerrDiskHit1Texture, transferUv);
+  float hitCoverage1 = smoothstep(0.2, 0.8, hit1.a);
+  if (hitCoverage1 > 0.0) {
+    float hitPhi = hit1.y + uCameraCoordinates.w;
+    vec2 hitPosition = hit1.x * vec2(cos(hitPhi), sin(hitPhi));
+    float shift = v21FrequencyShift(hit1.x, lambda);
+    vec4 disk = diskColor(hitPosition, uTime - hit1.z, shift);
+    color = color * (1.0 - disk.a * hitCoverage1) + disk.rgb * hitCoverage1;
+  }
+
+  vec4 hit0 = texture(uKerrDiskHit0Texture, transferUv);
+  float hitCoverage0 = smoothstep(0.2, 0.8, hit0.a);
+  if (hitCoverage0 > 0.0) {
+    float hitPhi = hit0.y + uCameraCoordinates.w;
+    vec2 hitPosition = hit0.x * vec2(cos(hitPhi), sin(hitPhi));
+    float shift = v21FrequencyShift(hit0.x, lambda);
+    vec4 disk = diskColor(hitPosition, uTime - hit0.z, shift);
+    color = color * (1.0 - disk.a * hitCoverage0) + disk.rgb * hitCoverage0;
+  }
+
+  return max(color, vec3(0.0));
+}
+
 vec3 acesToneMap(vec3 color) {
   const float a = 2.51;
   const float b = 0.03;
@@ -467,6 +569,8 @@ void main() {
   vec2 screen = (2.0 * gl_FragCoord.xy - uResolution) / uResolution.y;
   float focalLength = 1.0 / tan(uFovY * 0.5);
   vec3 viewDirection = vec3(screen, -focalLength);
-  vec3 hdr = sceneColor(viewDirection) * uExposure;
+  vec3 hdr = (uKerrMapReady == 1
+    ? kerrSceneColor(screen)
+    : schwarzschildSceneColor(viewDirection)) * uExposure;
   fragmentColor = vec4(linearToSrgb(acesToneMap(hdr)), 1.0);
 }

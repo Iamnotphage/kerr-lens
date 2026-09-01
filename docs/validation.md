@@ -75,6 +75,22 @@ the former long-time concentric-ring failure and any discontinuity at field rene
 GPU clock additionally wraps only after the complete `12 × 97 = 1,164`-unit seed cycle;
 unit tests pin that period and keep the TypeScript and GLSL constants synchronized.
 
+## V2.1 Kerr lensing regression
+
+The analytic suite validates the finite-observer projection separately from the GPU map:
+
+- screen constants mirror under `(a*, x) -> (-a*, -x)`;
+- spherical-photon `lambda` and `eta` make the Carter radial polynomial a double root;
+- the zero-spin critical curve recovers the exact local Schwarzschild angular radius;
+- positive and negative critical curves are horizontal mirror images; and
+- high-inclination spin produces a finite, displaced shadow rather than scaling a circle.
+
+The browser suite pauses animation, fixes simulation time, captures `a* = 0`, `+0.9`,
+and `-0.9` directly from the canvas, and requires all three byte images to differ. The
+validation report exports the active map spin, resolution, readiness, and rebuild count.
+Zero spin deliberately disables the Kerr map and exercises the original Schwarzschild
+shader path, preventing numerical near-zero integration from weakening that regression.
+
 Run all local non-browser gates with:
 
 ```bash

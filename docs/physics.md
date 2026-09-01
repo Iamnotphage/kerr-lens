@@ -2,7 +2,7 @@
 
 ## Units and spacetime
 
-The V2.0 image renderer uses geometrized units with the Schwarzschild radius
+The renderer uses geometrized units with the Schwarzschild radius
 
 \[
 r_s = \frac{2GM}{c^2} = 1.
@@ -34,7 +34,7 @@ which corresponds to the unstable photon sphere at `r = 3/2` and the critical sh
 b_c = \frac{1}{\sqrt{\mu}} = \frac{3\sqrt{3}}{2}r_s.
 \]
 
-## V2.0 Kerr parameter layer
+## Kerr parameter layer and V2.1 ray transfer
 
 V2.0 adds a signed dimensionless spin model `a*` on the CPU. It computes the
 Boyer–Lindquist horizons and stationary limit, disk-plane photon orbit, signed-branch
@@ -47,9 +47,12 @@ photon-sphere, ISCO, and efficiency constants exactly. Positive spin is aligned 
 the disk's positive orbit; negative spin opposes it. The complete equations and sign
 convention are documented in [kerr.md](kerr.md).
 
-This parameter layer is not consumed by the V2.0 fragment shader. Light propagation
-below therefore remains Schwarzschild until V2.1, and the surface-emission model
-remains the zero-spin Page–Thorne disk until V2.2.
+At non-zero spin V2.1 consumes this layer in a finite-observer Kerr transfer-map
+shader. It derives the conserved axial angular momentum and Carter constant in a
+ZAMO tetrad, integrates the separated radial and polar potentials, and records the
+escaped sky direction plus two ordered equatorial intersections. Exact zero spin
+continues to use the Schwarzschild tables below. The surface-emission model remains
+the zero-spin Page–Thorne disk until V2.2.
 
 ## Constant-time beam tracing
 
@@ -71,6 +74,11 @@ u^\mu_{obs} = \left((1-1/r)^{-1/2}, 0, 0, 0\right).
 \]
 
 Screen rays are constructed in the observer's local orthonormal tetrad before being transformed into the pseudo-Cartesian frame used by the lookup algorithm. The current UI intentionally prevents a static observer from approaching the horizon, where infinite proper acceleration would be required.
+
+For non-zero spin, the corresponding observer is locally non-rotating rather than
+static. Its angular velocity `omega = 2ar/A` follows the dragged inertial frame, while
+its lapse `alpha = sqrt(Sigma Delta/A)` normalizes the local time axis. At the allowed
+`7–40 r_s` camera radii this tetrad remains outside the stationary-limit surface.
 
 ## Accretion disk
 
