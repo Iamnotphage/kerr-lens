@@ -1,4 +1,4 @@
-# V1.3 validation contract
+# V1.3+ validation contract
 
 V1.3 separates numerical correctness, image review, and performance measurement.
 No single screenshot or FPS number is treated as evidence for all three.
@@ -55,6 +55,15 @@ The `?benchmark=1` mode discards warm-up frames and exports a fixed-length frame
 distribution. CI uses a shorter smoke sample to verify the instrumentation, one-draw
 call contract, and JSON schema. Publishable comparisons should use at least 600 frames
 on the same physical device and environment.
+
+## V2.0 Kerr regression
+
+The Kerr unit suite pins the signed-spin endpoints `a* = ±0.998`, verifies that the
+horizons are even in spin, checks that the equatorial static limit remains `1 r_s`,
+and tests prograde/retrograde photon-orbit, ISCO, energy, angular-velocity, and
+radiative-efficiency anchors. At `a* = 0`, every radius shared with the renderer is
+required to equal the existing Schwarzschild constant exactly, not merely within a
+floating-point tolerance.
 
 Run all local non-browser gates with:
 

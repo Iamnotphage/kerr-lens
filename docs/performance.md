@@ -48,7 +48,7 @@ Benchmark only after the loading layer disappears and at least five seconds of s
 
 The on-screen HUD is a live diagnostic based on an EMA, not a publishable benchmark.
 
-## V1.3 benchmark mode
+## V1.3+ benchmark mode
 
 Append `?benchmark=1` to the application URL to run a controlled browser sample.
 The mode fixes balanced render scale and animation time, discards 90 warm-up frames,
@@ -65,6 +65,10 @@ for example `?benchmark=1&frames=1200`. Compare only runs with the same browser,
 GPU, viewport, device-pixel ratio, quality, and scene. A greater than 5% change in
 median or p95 under a matched environment is a regression investigation trigger,
 not an automatic proof of a shader regression.
+
+V2.0 evaluates Kerr parameters only when the spin control changes. No Kerr expression,
+uniform, texture lookup, or branch was added to the per-pixel render path, so the
+one-draw-call shader cost is identical to V1.3.
 
 ## Future work
 

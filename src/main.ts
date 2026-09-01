@@ -1,5 +1,6 @@
 import "./style.css";
 
+import { kerrParameters, type KerrParameters } from "./physics/kerr";
 import { thermalDiskParameters } from "./physics/thinDisk";
 import {
   BlackHoleRenderer,
@@ -16,8 +17,9 @@ import {
 } from "./validation/FrameBenchmark";
 
 interface ValidationReport {
-  readonly version: "1.3";
+  readonly version: "2.0";
   readonly observer: ObserverState;
+  readonly kerr: KerrParameters;
   readonly appearance: DiskAppearance;
   readonly quality: QualityMode;
   readonly drawingBuffer: readonly [number, number];
@@ -54,6 +56,7 @@ const loadingProgress = element<HTMLSpanElement>("loading-progress");
 const fatalError = element<HTMLDivElement>("fatal-error");
 const fatalErrorDetail = element<HTMLParagraphElement>("fatal-error-detail");
 const gestureHint = element<HTMLDivElement>("gesture-hint");
+const brandSpin = element<HTMLSpanElement>("brand-spin");
 const benchmarkPanel = element<HTMLElement>("benchmark-panel");
 const benchmarkPhase = element<HTMLParagraphElement>("benchmark-phase");
 const benchmarkSamples = element<HTMLOutputElement>("benchmark-samples");
@@ -77,6 +80,7 @@ if (benchmarkMode) {
 }
 
 const inclinationInput = element<HTMLInputElement>("inclination");
+const spinInput = element<HTMLInputElement>("spin");
 const distanceInput = element<HTMLInputElement>("distance");
 const massInput = element<HTMLInputElement>("mass");
 const eddingtonRatioInput = element<HTMLInputElement>("eddington-ratio");
@@ -89,6 +93,7 @@ const skyInput = element<HTMLInputElement>("sky-enabled");
 const pausedInput = element<HTMLInputElement>("paused");
 
 const inclinationValue = element<HTMLOutputElement>("inclination-value");
+const spinValue = element<HTMLOutputElement>("spin-value");
 const distanceValue = element<HTMLOutputElement>("distance-value");
 const massValue = element<HTMLOutputElement>("mass-value");
 const eddingtonRatioValue = element<HTMLOutputElement>("eddington-ratio-value");
@@ -99,6 +104,15 @@ const appearanceNote = element<HTMLParagraphElement>("appearance-note");
 const exposureValue = element<HTMLOutputElement>("exposure-value");
 const heroEyebrow = element<HTMLParagraphElement>("hero-eyebrow");
 const heroDetail = element<HTMLParagraphElement>("hero-detail");
+const spacetimeStatus = element<HTMLDivElement>("spacetime-status");
+const spacetimeStatusTitle = element<HTMLElement>("spacetime-status-title");
+const spinNote = element<HTMLParagraphElement>("spin-note");
+const kerrHorizonValue = element<HTMLElement>("kerr-horizon-value");
+const kerrErgosphereValue = element<HTMLElement>("kerr-ergosphere-value");
+const kerrPhotonValue = element<HTMLElement>("kerr-photon-value");
+const kerrIscoValue = element<HTMLElement>("kerr-isco-value");
+const kerrEfficiencyValue = element<HTMLElement>("kerr-efficiency-value");
+const kerrOmegaValue = element<HTMLElement>("kerr-omega-value");
 
 const fpsElement = element<HTMLSpanElement>("fps");
 const frameTimeElement = element<HTMLSpanElement>("frame-time");
@@ -108,6 +122,7 @@ const initialDisk = thermalDiskParameters(
   10 ** Number(massInput.value),
   10 ** Number(eddingtonRatioInput.value),
 );
+let activeKerr = kerrParameters(Number(spinInput.value));
 
 const initialSettings: RendererSettings = {
   peakColorTemperature: initialDisk.peakColorTemperatureK,
@@ -154,6 +169,10 @@ function formatAccretionRate(rateSolarPerYear: number): string {
   return `${rateSolarPerYear.toFixed(digits)} M☉/yr`;
 }
 
+function formatSpin(spin: number): string {
+  return `${spin > 0 ? "+" : ""}${spin.toFixed(3)}`;
+}
+
 function showFatalError(error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
   loading.hidden = true;
@@ -197,8 +216,9 @@ async function start(): Promise<void> {
   const validationReport = (): ValidationReport => {
     const buffer = blackHole.getDrawingBufferSize();
     return {
-      version: "1.3",
+      version: "2.0",
       observer: { ...observer },
+      kerr: activeKerr,
       appearance: appearanceInput.value as DiskAppearance,
       quality: qualityInput.value as QualityMode,
       drawingBuffer: [buffer.x, buffer.y],
@@ -272,6 +292,37 @@ async function start(): Promise<void> {
 
   let activeDisk = initialDisk;
 
+  const updateKerrUi = (): void => {
+    activeKerr = kerrParameters(Number(spinInput.value));
+    const spinLabel = formatSpin(activeKerr.spin);
+    spinValue.value = spinLabel;
+    brandSpin.textContent = `a* ${spinLabel}`;
+    spacetimeStatus.dataset.spinSense = activeKerr.diskSpinSense;
+
+    if (activeKerr.diskSpinSense === "prograde") {
+      spacetimeStatusTitle.textContent = "PROGRADE KERR PARAMETERS";
+      spinNote.textContent =
+        "Spin aligned with disk orbit · ISCO moves inward. Image frame dragging begins in V2.1.";
+    } else if (activeKerr.diskSpinSense === "retrograde") {
+      spacetimeStatusTitle.textContent = "RETROGRADE KERR PARAMETERS";
+      spinNote.textContent =
+        "Spin opposes disk orbit · ISCO moves outward. Image frame dragging begins in V2.1.";
+    } else {
+      spacetimeStatusTitle.textContent = "EXACT SCHWARZSCHILD LIMIT";
+      spinNote.textContent =
+        "Zero spin · Kerr and Schwarzschild parameter sets coincide exactly.";
+    }
+
+    kerrHorizonValue.textContent = `${activeKerr.outerHorizonRs.toFixed(3)} rₛ`;
+    kerrErgosphereValue.textContent = `${activeKerr.equatorialErgosphereWidthRs.toFixed(3)} rₛ`;
+    kerrPhotonValue.textContent = `${activeKerr.diskPhotonOrbitRs.toFixed(3)} rₛ`;
+    kerrIscoValue.textContent = `${activeKerr.diskIscoRs.toFixed(3)} rₛ`;
+    kerrEfficiencyValue.textContent = `${(activeKerr.radiativeEfficiency * 100).toFixed(3)}%`;
+    kerrOmegaValue.textContent =
+      `${activeKerr.horizonAngularVelocityM > 0 ? "+" : ""}` +
+      activeKerr.horizonAngularVelocityM.toFixed(4);
+  };
+
   const updateAppearanceUi = (appearance: DiskAppearance): void => {
     const cinematic = appearance === "cinematic";
     massInput.disabled = cinematic;
@@ -330,6 +381,10 @@ async function start(): Promise<void> {
     controller.setState({ inclination: (Number(inclinationInput.value) * Math.PI) / 180 });
     governor.markInteraction();
   });
+  spinInput.addEventListener("input", () => {
+    updateKerrUi();
+    governor.markInteraction(120);
+  });
   distanceInput.addEventListener("input", () => {
     controller.setState({ radius: Number(distanceInput.value) });
     governor.markInteraction();
@@ -372,6 +427,7 @@ async function start(): Promise<void> {
   });
 
   updateObserverUi(observer);
+  updateKerrUi();
   updateDiskModel();
   exposureValue.value = initialSettings.exposure.toFixed(2);
   applySize();
