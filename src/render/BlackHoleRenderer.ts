@@ -17,6 +17,7 @@ import { staticObserver } from "../physics/schwarzschild";
 import fragmentShader from "../shaders/black-hole.frag.glsl?raw";
 import vertexShader from "../shaders/fullscreen.vert.glsl?raw";
 import type { ObserverState } from "./ObserverController";
+import { wrapDiskFlowTime } from "./diskFlow";
 import type { PhysicsTextures } from "./loadPhysicsTextures";
 
 export type DiskAppearance = "cinematic" | "scientific";
@@ -134,7 +135,12 @@ export class BlackHoleRenderer {
   }
 
   updateObserver(state: ObserverState): void {
-    const observer = staticObserver(state.radius, state.inclination, state.azimuth, this.simulationTime);
+    const observer = staticObserver(
+      state.radius,
+      state.inclination,
+      state.azimuth,
+      wrapDiskFlowTime(this.simulationTime),
+    );
     (this.material.uniforms.uCameraCoordinates?.value as Vector4).fromArray(observer.coordinates);
     (this.material.uniforms.uCameraPosition?.value as Vector3).fromArray(observer.position);
     (this.material.uniforms.uCameraFourVelocity?.value as Vector4).fromArray(observer.fourVelocity);
@@ -169,9 +175,19 @@ export class BlackHoleRenderer {
 
   render(deltaSeconds: number, observer: ObserverState): void {
     if (!this.settings.paused) this.simulationTime += Math.min(deltaSeconds, 0.05) * 7.5;
-    this.material.uniforms.uTime!.value = this.simulationTime;
+    this.material.uniforms.uTime!.value = wrapDiskFlowTime(this.simulationTime);
     this.updateObserver(observer);
     this.renderer.render(this.scene, this.camera);
+  }
+
+  setSimulationTime(simulationTime: number): void {
+    const flowTime = wrapDiskFlowTime(simulationTime);
+    this.simulationTime = simulationTime;
+    this.material.uniforms.uTime!.value = flowTime;
+  }
+
+  getSimulationTime(): number {
+    return this.simulationTime;
   }
 
   getDrawingBufferSize(): Vector2 {

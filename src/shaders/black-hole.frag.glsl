@@ -74,6 +74,11 @@ const int INVERSE_RADIUS_WIDTH = 64;
 const int INVERSE_RADIUS_HEIGHT = 32;
 const int DISK_TEMPERATURE_WIDTH = 256;
 const float BLACK_BODY_TABLE_MAX_TEMPERATURE = 39408.3376;
+// A frozen 2D texture sheared forever by Omega(r) eventually phase-mixes into
+// sub-pixel radial bands. Real disk turbulence has a finite correlation time,
+// so overlapping fields are born and retired before that can happen.
+const float FLOW_COHERENCE_TIME = 12.0;
+const float FLOW_SEED_PERIOD = 97.0;
 // Mild, nearly luminance-neutral film grade: Rec.709 weighted gain ≈ 1.003.
 const vec3 CINEMATIC_WARM_GRADE = vec3(1.08, 0.99, 0.91);
 
@@ -244,30 +249,77 @@ float diskTemperatureProfile(float radius) {
   return texture(uDiskTemperatureTexture, vec2(profileU, 0.5)).r;
 }
 
-float diskBrightnessStructure(vec2 position, float radius, float coordinateTime) {
-  float omega = sqrt(0.5 / (radius * radius * radius));
+vec2 flowEpochOffset(float epoch) {
+  float wrappedEpoch = mod(epoch, FLOW_SEED_PERIOD);
+  return fract(vec2(wrappedEpoch * 0.754877666, wrappedEpoch * 0.569840296));
+}
 
+float advectedDiskStructure(
+  vec2 direction,
+  float radius,
+  float omega,
+  float spiralTwist,
+  float fieldAge,
+  vec2 epochOffset
+) {
   // Rotate the normalized disk-plane position directly instead of recovering
   // its angle with atan(). This is exactly continuous across the negative-x
   // axis, where atan(y, x) changes branch from +PI to -PI.
-  float twist = -coordinateTime * omega + 1.35 * log(radius / INNER_DISK_RADIUS);
+  float twist = -fieldAge * omega + spiralTwist;
   float cosTwist = cos(twist);
   float sinTwist = sin(twist);
-  vec2 direction = position / radius;
   vec2 flowDirection = vec2(
     cosTwist * direction.x - sinTwist * direction.y,
     sinTwist * direction.x + cosTwist * direction.y
   );
   vec2 flowPosition = radius * flowDirection;
   vec2 broadUv = flowPosition * 0.105;
-  float broad = texture(uNoiseTexture, broadUv + vec2(0.37, 0.71)).r;
-  float fine = texture(uNoiseTexture, broadUv * 3.65 + vec2(0.13, 0.47)).r;
+  // R stores the broad field and G stores a prepacked 3.65x-frequency field,
+  // keeping each finite-age generation to one texture lookup.
+  vec2 turbulence = texture(
+    uNoiseTexture,
+    broadUv + vec2(0.37, 0.71) + epochOffset
+  ).rg;
+  float broad = turbulence.r;
+  float fine = turbulence.g;
 
   // sin(3a) = 3 sin(a) - 4 sin^3(a) gives a three-arm filament field
   // without a non-periodic raw-angle multiplier or another trig evaluation.
   float flowY = flowDirection.y;
   float filament = 0.5 + 0.5 * flowY * (3.0 - 4.0 * flowY * flowY);
   return smoothstep(0.2, 0.82, 0.52 * broad + 0.34 * fine + 0.14 * filament);
+}
+
+float diskBrightnessStructure(vec2 position, float radius, float coordinateTime) {
+  float inverseRadius = 1.0 / radius;
+  vec2 direction = position * inverseRadius;
+  float omega = sqrt(0.5 * inverseRadius * inverseRadius * inverseRadius);
+  float spiralTwist = 1.35 * log(radius / INNER_DISK_RADIUS);
+  float cycle = coordinateTime / FLOW_COHERENCE_TIME + 0.5;
+  float epoch = floor(cycle);
+  float phase = fract(cycle);
+  float blend = phase * phase * (3.0 - 2.0 * phase);
+
+  // A field lives for two adjacent epochs. At a boundary the old current field
+  // becomes the new previous field at the exact same age, and the zero-slope
+  // smoothstep weights make both value and first temporal derivative continuous.
+  float previous = advectedDiskStructure(
+    direction,
+    radius,
+    omega,
+    spiralTwist,
+    (phase + 1.0) * FLOW_COHERENCE_TIME,
+    flowEpochOffset(epoch - 1.0)
+  );
+  float current = advectedDiskStructure(
+    direction,
+    radius,
+    omega,
+    spiralTwist,
+    phase * FLOW_COHERENCE_TIME,
+    flowEpochOffset(epoch)
+  );
+  return mix(previous, current, blend);
 }
 
 vec4 diskColor(vec2 position, float coordinateTime, float shiftFactor) {

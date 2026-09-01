@@ -70,6 +70,16 @@ V2.0 evaluates Kerr parameters only when the spin control changes. No Kerr expre
 uniform, texture lookup, or branch was added to the per-pixel render path, so the
 one-draw-call shader cost is identical to V1.3.
 
+V2.0.1 replaces the indefinitely sheared frozen turbulence texture with two overlapping,
+finite-age fields. Broad and fine noise are prepacked into the R and G channels, so each
+field costs one 128×128 mipmapped sample and the disk-shading budget remains two samples
+per visible hit. The renderer still uses one full-screen triangle, one pass, and one draw
+call. The fields crossfade with zero-slope weights and never exceed two coherence windows
+of shear. Their 97-epoch sequence repeats
+exactly, so the CPU wraps only the GPU flow clock every 1,164 simulation units and avoids
+long-running `highp` phase loss without a visible reset. Use the matched-device 5%
+median/p95 rule above when judging the added sampling cost.
+
 ## Future work
 
 - GPU timer queries where `EXT_disjoint_timer_query_webgl2` is available;

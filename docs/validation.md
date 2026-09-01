@@ -65,6 +65,16 @@ radiative-efficiency anchors. At `a* = 0`, every radius shared with the renderer
 required to equal the existing Schwarzschild constant exactly, not merely within a
 floating-point tolerance.
 
+## V2.0.1 temporal-coherence regression
+
+The browser suite can set simulation time directly while animation is paused. It captures
+the near-face-on disk at `t = 0`, `3,600`, and `86,400` simulation units. The flow shader
+never advects one frozen field for that full duration: two overlapping fields are limited
+to two 12-unit coherence windows, then exchanged continuously. These images expose both
+the former long-time concentric-ring failure and any discontinuity at field renewal. The
+GPU clock additionally wraps only after the complete `12 × 97 = 1,164`-unit seed cycle;
+unit tests pin that period and keep the TypeScript and GLSL constants synchronized.
+
 Run all local non-browser gates with:
 
 ```bash

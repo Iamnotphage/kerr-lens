@@ -2,7 +2,7 @@
 
 A performance-first, physically grounded black-hole renderer for the web.
 
-Version 2.0 adds a tested Kerr parameter framework to the numerically validated Schwarzschild image renderer. A signed spin control computes the horizons, ergosphere, disk-aligned photon orbit and ISCO, orbital frequency, and Novikov–Thorne efficiency. The image ray tracing and emitting disk deliberately remain Schwarzschild until V2.1 and V2.2 respectively; V2.0 does not fake rotation by spinning a sphere or texture.
+Version 2.0 adds a tested Kerr parameter framework to the numerically validated Schwarzschild image renderer. A signed spin control computes the horizons, ergosphere, disk-aligned photon orbit and ISCO, orbital frequency, and Novikov–Thorne efficiency. The image ray tracing and emitting disk deliberately remain Schwarzschild until V2.1 and V2.2 respectively; V2.0 does not fake rotation by spinning a sphere or texture. V2.0.1 gives the procedural turbulence a finite correlation time so differential rotation cannot wind a frozen texture into artificial concentric rings.
 
 ## Why this is different
 
@@ -71,7 +71,7 @@ Mass and Eddington ratio are logarithmic controls spanning `10⁷–10¹⁰ M☉
 - Constant-time beam tracing through two small floating-point lookup textures.
 - A single render pass with no mandatory bloom chain.
 - The radial Page–Thorne temperature calculation is precomputed once into a 1 KiB `R32F` profile.
-- Both materials share two cached noise samples per visible disk hit; there is no particle loop. The cinematic material maps the same field to emissivity and optical depth, so it adds no texture fetches.
+- Both materials share two small, mipmapped noise samples per visible disk hit. Broad and fine turbulence are packed into separate texture channels, so two finite-age fields can be blended continuously without increasing the V2.0 sample count. There is no particle loop, extra pass, or extra draw call.
 - High-performance WebGL context and no MSAA.
 - Render resolution drops temporarily during interaction.
 - Adaptive mode targets 60 fps using an exponential moving average of frame time.
