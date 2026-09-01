@@ -177,7 +177,9 @@ arbitrary latitude. Boyer–Lindquist `phi` is not evolved directly: the shader 
 the regular Cartesian angular direction
 `(sin(theta) cos(phi), sin(theta) sin(phi), cos(theta))`. Its differential remains
 finite as the ray approaches the spin axis, removing the coordinate jump without a
-screen-space correction.
+screen-space correction. The initial signed `d mu / d gamma` is taken directly from
+the local ZAMO polar momentum; reconstructing it as `sign * sqrt(M)` is algebraically
+equivalent but loses precision along the horizontal screen axis.
 The first two valid crossings of `mu = 0` become ordered thin-disk intersections,
 stored as Cartesian disk-plane coordinates to avoid interpolating across an azimuth
 branch cut. The transfer map retains a radial guard band beyond the visible annulus,

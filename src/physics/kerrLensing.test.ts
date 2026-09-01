@@ -22,12 +22,28 @@ describe("Kerr screen constants", () => {
     expect(reflected.lambda).toBeCloseTo(-positive.lambda, 12);
     expect(reflected.eta).toBeCloseTo(positive.eta, 12);
     expect(reflected.localEnergy).toBeCloseTo(positive.localEnergy, 12);
+    expect(reflected.backwardMuVelocity).toBeCloseTo(positive.backwardMuVelocity, 12);
   });
 
   it("places the optical axis on a zero-angular-momentum Schwarzschild ray", () => {
     const constants = kerrScreenConstants(0, 26, 1.2, 0, 0, FOV_Y);
     expect(constants.lambda).toBe(0);
     expect(constants.eta).toBeCloseTo(0, 14);
+    expect(constants.backwardMuVelocity).toBe(0);
+  });
+
+  it("initializes signed polar motion without a cancellation-prone square root", () => {
+    const spin = 0.8;
+    const inclination = (8 * Math.PI) / 180;
+    const constants = kerrScreenConstants(spin, 26, inclination, 0.83, 1e-7, FOV_Y);
+    const potential = kerrPolarPotentialMu(
+      Math.cos(inclination),
+      spin,
+      constants.lambda,
+      constants.eta,
+    );
+    expect(constants.backwardMuVelocity).toBeGreaterThan(0);
+    expect(constants.backwardMuVelocity ** 2).toBeCloseTo(potential, 9);
   });
 });
 

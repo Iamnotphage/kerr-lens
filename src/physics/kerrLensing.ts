@@ -7,6 +7,7 @@ export interface KerrScreenConstants {
   readonly lambda: number;
   readonly eta: number;
   readonly localEnergy: number;
+  readonly backwardMuVelocity: number;
 }
 
 export interface KerrCriticalPoint {
@@ -100,7 +101,10 @@ export function kerrScreenConstants(
   const eta =
     (covariantThetaMomentum / energy) ** 2 +
     cosine * cosine * (lambda * lambda / (sine * sine) - spin * spin);
-  return { lambda, eta, localEnergy: energy };
+  // This signed value is algebraically sqrt(M(mu_observer)), but evaluating it
+  // directly avoids subtracting the large eta/lambda terms when screenY -> 0.
+  const backwardMuVelocity = (sine * covariantThetaMomentum) / energy;
+  return { lambda, eta, localEnergy: energy, backwardMuVelocity };
 }
 
 /** Carter radial polynomial R/E² in M = 1 Boyer-Lindquist units. */

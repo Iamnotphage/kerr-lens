@@ -134,8 +134,7 @@ void main() {
   float coordinateTime = 0.0;
   vec2 velocity = vec2(
     -sqrt(max(radialPotential(radius, lambda, eta), 0.0)),
-    (backwardDirection.y >= 0.0 ? 1.0 : -1.0) *
-      sqrt(max(polarPotential(cosineTheta, lambda, eta), 0.0))
+    sineTheta * covariantThetaMomentum / energy
   );
   float outerHorizon = 1.0 + sqrt(max(1.0 - spinSquared, 0.0));
   float escapeRadius = max(initialRadius + 20.0, 72.0);
@@ -173,7 +172,7 @@ void main() {
     );
     float minoStep = targetCoordinateStep / max(abs(velocity.x), 0.5);
     minoStep = min(minoStep, 0.025 / max(abs(velocity.y), 0.25));
-    minoStep = min(minoStep, 0.08 / max(length(angularDerivative), 0.5));
+    minoStep = min(minoStep, 0.14 / max(length(angularDerivative), 0.5));
     minoStep = clamp(minoStep, 1e-5, 0.05);
 
     float midpointRadius = radius + radiusDerivative * (0.5 * minoStep);
