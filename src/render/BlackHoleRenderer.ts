@@ -18,11 +18,13 @@ import fragmentShader from "../shaders/black-hole.frag.glsl?raw";
 import vertexShader from "../shaders/fullscreen.vert.glsl?raw";
 import type { ObserverState } from "./ObserverController";
 import { wrapDiskFlowTime } from "./diskFlow";
+import { KerrLensingMap, type KerrLensingMapState } from "./KerrLensingMap";
 import type { PhysicsTextures } from "./loadPhysicsTextures";
 
 export type DiskAppearance = "cinematic" | "scientific";
 
 export interface RendererSettings {
+  spin: number;
   peakColorTemperature: number;
   spectralDilution: number;
   exposure: number;
@@ -40,6 +42,7 @@ export interface RendererDiagnostics {
   readonly shadingLanguageVersion: string;
   readonly drawCalls: number;
   readonly triangles: number;
+  readonly kerrLensing: KerrLensingMapState;
 }
 
 export class BlackHoleRenderer {
@@ -50,6 +53,7 @@ export class BlackHoleRenderer {
   private readonly camera = new Camera();
   private readonly material: RawShaderMaterial;
   private readonly geometry: BufferGeometry;
+  private readonly kerrLensingMap: KerrLensingMap;
   private readonly resolution = new Vector2(1, 1);
   private simulationTime = 0;
   private settings: RendererSettings;
@@ -82,6 +86,16 @@ export class BlackHoleRenderer {
     this.renderer.debug.checkShaderErrors = true;
     this.renderer.setClearColor(0x02040a, 1);
 
+    const context = this.renderer.getContext();
+    const debugInfo = context.getExtension("WEBGL_debug_renderer_info") as {
+      readonly UNMASKED_RENDERER_WEBGL: number;
+    } | null;
+    const rendererName = String(
+      context.getParameter(debugInfo?.UNMASKED_RENDERER_WEBGL ?? context.RENDERER) ?? "",
+    );
+    const softwareRenderer = /swiftshader|llvmpipe|software/i.test(rendererName);
+    this.kerrLensingMap = new KerrLensingMap(this.renderer, softwareRenderer);
+
     this.material = new RawShaderMaterial({
       glslVersion: GLSL3,
       vertexShader,
@@ -106,6 +120,10 @@ export class BlackHoleRenderer {
         uDiskTemperatureTexture: { value: physicsTextures.diskTemperature },
         uNoiseTexture: { value: physicsTextures.noise },
         uSkyTexture: { value: physicsTextures.sky },
+        uKerrSkyTexture: { value: this.kerrLensingMap.target.textures[0] },
+        uKerrDiskHit0Texture: { value: this.kerrLensingMap.target.textures[1] },
+        uKerrDiskHit1Texture: { value: this.kerrLensingMap.target.textures[2] },
+        uKerrShadowTexture: { value: this.kerrLensingMap.shadowTexture },
         uTime: { value: 0 },
         uExposure: { value: settings.exposure },
         uDiskPeakTemperature: { value: settings.peakColorTemperature },
@@ -114,6 +132,9 @@ export class BlackHoleRenderer {
         uDiskEnabled: { value: settings.diskEnabled ? 1 : 0 },
         uDopplerEnabled: { value: settings.dopplerEnabled ? 1 : 0 },
         uSkyEnabled: { value: settings.skyEnabled ? 1 : 0 },
+        uKerrMapReady: { value: 0 },
+        uKerrSpin: { value: settings.spin },
+        uKerrShadowCenter: { value: new Vector2() },
       },
     });
 
@@ -132,6 +153,8 @@ export class BlackHoleRenderer {
 
   async warmup(): Promise<void> {
     await this.renderer.compileAsync(this.scene, this.camera);
+    await this.kerrLensingMap.compile(this.renderer);
+    if (this.kerrLensingMap.renderIfNeeded(this.renderer, true)) this.syncKerrMap();
   }
 
   updateObserver(state: ObserverState): void {
@@ -148,10 +171,16 @@ export class BlackHoleRenderer {
     (this.material.uniforms.uCameraRightAxis?.value as Vector3).fromArray(observer.rightAxis);
     (this.material.uniforms.uCameraUpAxis?.value as Vector3).fromArray(observer.upAxis);
     (this.material.uniforms.uCameraOutwardAxis?.value as Vector3).fromArray(observer.outwardAxis);
+    if (this.kerrLensingMap.request(this.settings.spin, state)) {
+      this.material.uniforms.uKerrMapReady!.value = 0;
+    }
   }
 
   updateSettings(settings: Partial<RendererSettings>): void {
     this.settings = { ...this.settings, ...settings };
+    if (settings.spin !== undefined) {
+      this.material.uniforms.uKerrSpin!.value = settings.spin;
+    }
     if (settings.peakColorTemperature !== undefined) {
       this.material.uniforms.uDiskPeakTemperature!.value = settings.peakColorTemperature;
     }
@@ -171,12 +200,16 @@ export class BlackHoleRenderer {
     this.renderer.setPixelRatio(pixelRatio);
     this.renderer.setSize(Math.max(cssWidth, 1), Math.max(cssHeight, 1), false);
     this.renderer.getDrawingBufferSize(this.resolution);
+    if (this.kerrLensingMap.resize(cssWidth, cssHeight)) {
+      this.material.uniforms.uKerrMapReady!.value = 0;
+    }
   }
 
   render(deltaSeconds: number, observer: ObserverState): void {
     if (!this.settings.paused) this.simulationTime += Math.min(deltaSeconds, 0.05) * 7.5;
     this.material.uniforms.uTime!.value = wrapDiskFlowTime(this.simulationTime);
     this.updateObserver(observer);
+    if (this.kerrLensingMap.renderIfNeeded(this.renderer)) this.syncKerrMap();
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -210,7 +243,18 @@ export class BlackHoleRenderer {
       shadingLanguageVersion: parameter(context.SHADING_LANGUAGE_VERSION),
       drawCalls: this.renderer.info.render.calls,
       triangles: this.renderer.info.render.triangles,
+      kerrLensing: this.kerrLensingMap.getState(),
     };
+  }
+
+  private syncKerrMap(): void {
+    const state = this.kerrLensingMap.getState();
+    this.material.uniforms.uKerrMapReady!.value = state.ready ? 1 : 0;
+    this.material.uniforms.uKerrSpin!.value = state.spin;
+    (this.material.uniforms.uKerrShadowCenter!.value as Vector2).set(
+      state.shadowCenterX,
+      state.shadowCenterY,
+    );
   }
 
   dispose(): void {
@@ -226,6 +270,7 @@ export class BlackHoleRenderer {
     }
     this.geometry.dispose();
     this.material.dispose();
+    this.kerrLensingMap.dispose();
     this.renderer.dispose();
   }
 }

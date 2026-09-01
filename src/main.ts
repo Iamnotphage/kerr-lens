@@ -17,7 +17,7 @@ import {
 } from "./validation/FrameBenchmark";
 
 interface ValidationReport {
-  readonly version: "2.0.1";
+  readonly version: "2.1.0";
   readonly observer: ObserverState;
   readonly kerr: KerrParameters;
   readonly appearance: DiskAppearance;
@@ -127,6 +127,7 @@ const initialDisk = thermalDiskParameters(
 let activeKerr = kerrParameters(Number(spinInput.value));
 
 const initialSettings: RendererSettings = {
+  spin: activeKerr.spin,
   peakColorTemperature: initialDisk.peakColorTemperatureK,
   spectralDilution: initialDisk.spectralDilution,
   exposure: Number(exposureInput.value),
@@ -218,7 +219,7 @@ async function start(): Promise<void> {
   const validationReport = (): ValidationReport => {
     const buffer = blackHole.getDrawingBufferSize();
     return {
-      version: "2.0.1",
+      version: "2.1.0",
       observer: { ...observer },
       kerr: activeKerr,
       appearance: appearanceInput.value as DiskAppearance,
@@ -304,13 +305,13 @@ async function start(): Promise<void> {
     spacetimeStatus.dataset.spinSense = activeKerr.diskSpinSense;
 
     if (activeKerr.diskSpinSense === "prograde") {
-      spacetimeStatusTitle.textContent = "PROGRADE KERR PARAMETERS";
+      spacetimeStatusTitle.textContent = "PROGRADE KERR LENSING";
       spinNote.textContent =
-        "Spin aligned with disk orbit · ISCO moves inward. Image frame dragging begins in V2.1.";
+        "Spin aligned with disk orbit · frame dragging shifts the critical curve with the flow.";
     } else if (activeKerr.diskSpinSense === "retrograde") {
-      spacetimeStatusTitle.textContent = "RETROGRADE KERR PARAMETERS";
+      spacetimeStatusTitle.textContent = "RETROGRADE KERR LENSING";
       spinNote.textContent =
-        "Spin opposes disk orbit · ISCO moves outward. Image frame dragging begins in V2.1.";
+        "Spin opposes disk orbit · the Kerr lens map mirrors its frame-dragging asymmetry.";
     } else {
       spacetimeStatusTitle.textContent = "EXACT SCHWARZSCHILD LIMIT";
       spinNote.textContent =
@@ -339,10 +340,10 @@ async function start(): Promise<void> {
       colorTemperatureValue.value = "4,500 K";
       modelReadoutDetail.textContent = "DNGR-inspired · mild warm grade · marginal depth";
       appearanceNote.textContent =
-        "4500 K source with a mild warm film grade; geodesic lensing remains physical.";
+        "4500 K source with a mild warm film grade; light follows the active Kerr lens map.";
       heroEyebrow.textContent = "DNGR-INSPIRED CINEMATIC DISK";
       heroDetail.textContent =
-        "Schwarzschild geodesics lens a warm, marginally opaque 4500\u00a0K presentation disk.";
+        "Kerr null geodesics lens a warm, marginally opaque 4500\u00a0K presentation disk.";
     } else {
       modelReadoutLabel.textContent = "DERIVED COLOR PEAK · fcol 1.7";
       colorTemperatureValue.value = formatTemperature(activeDisk.peakColorTemperatureK);
@@ -353,7 +354,7 @@ async function start(): Promise<void> {
         "Page–Thorne flux, diluted blackbody spectrum, and an optically thick surface.";
       heroEyebrow.textContent = "PAGE–THORNE THERMAL DISK";
       heroDetail.textContent =
-        "Null geodesics bend the image; mass and accretion rate set the disk spectrum.";
+        "Kerr null geodesics bend the image; mass and accretion rate set the disk spectrum.";
     }
   };
 
@@ -387,6 +388,7 @@ async function start(): Promise<void> {
   });
   spinInput.addEventListener("input", () => {
     updateKerrUi();
+    blackHole.updateSettings({ spin: activeKerr.spin });
     governor.markInteraction(120);
   });
   distanceInput.addEventListener("input", () => {
