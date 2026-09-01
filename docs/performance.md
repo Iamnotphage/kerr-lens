@@ -76,7 +76,7 @@ field costs one 128×128 mipmapped sample and the disk-shading budget remains tw
 per visible hit. The renderer still uses one full-screen triangle, one pass, and one draw
 call. The fields crossfade with zero-slope weights and never exceed two coherence windows
 of shear. Their 97-epoch sequence repeats
-exactly, so the CPU wraps only the GPU flow clock every 2,328 simulation units and avoids
+exactly, so the CPU wraps only the GPU flow clock every 1,164 simulation units and avoids
 long-running `highp` phase loss without a visible reset. Use the matched-device 5%
 median/p95 rule above when judging the added sampling cost.
 

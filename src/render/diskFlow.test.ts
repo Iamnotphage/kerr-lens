@@ -19,7 +19,7 @@ describe("finite-coherence disk flow", () => {
   });
 
   it("wraps only at the exact full seed cycle", () => {
-    expect(DISK_FLOW_TIME_PERIOD).toBe(2_328);
+    expect(DISK_FLOW_TIME_PERIOD).toBe(1_164);
     expect(wrapDiskFlowTime(0)).toBe(0);
     expect(wrapDiskFlowTime(DISK_FLOW_TIME_PERIOD - 0.25)).toBe(
       DISK_FLOW_TIME_PERIOD - 0.25,

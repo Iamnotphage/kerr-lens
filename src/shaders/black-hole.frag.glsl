@@ -77,7 +77,7 @@ const float BLACK_BODY_TABLE_MAX_TEMPERATURE = 39408.3376;
 // A frozen 2D texture sheared forever by Omega(r) eventually phase-mixes into
 // sub-pixel radial bands. Real disk turbulence has a finite correlation time,
 // so overlapping fields are born and retired before that can happen.
-const float FLOW_COHERENCE_TIME = 24.0;
+const float FLOW_COHERENCE_TIME = 12.0;
 const float FLOW_SEED_PERIOD = 97.0;
 // Mild, nearly luminance-neutral film grade: Rec.709 weighted gain ≈ 1.003.
 const vec3 CINEMATIC_WARM_GRADE = vec3(1.08, 0.99, 0.91);
