@@ -34,5 +34,5 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   expect(canvasBounds?.height).toBeGreaterThan(400);
   expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
 
-  await page.screenshot({ path: testInfo.outputPath("kerr-lens-v1.png"), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath("kerr-lens-v1.1.png"), fullPage: true });
 });

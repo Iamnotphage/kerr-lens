@@ -240,13 +240,27 @@ float diskTemperatureProfile(float radius) {
 float accretionDensity(float radius, float angle, float coordinateTime) {
   float omega = sqrt(0.5 / (radius * radius * radius));
   float phase = angle - coordinateTime * omega;
-  vec2 flowUv = vec2(phase / TAU + radius * 0.017, log(radius) * 0.31);
-  float broad = texture(uNoiseTexture, flowUv).r;
-  // Angular harmonics must be integers so atan's ±π branch is periodic.
-  float fine = texture(uNoiseTexture, flowUv * vec2(3.0, 4.1) + vec2(0.17, 0.43)).r;
-  float filament = 0.62 * broad + 0.38 * fine;
-  float radialBands = 0.72 + 0.28 * sin(radius * 8.0 - phase * 2.0 + broad * 3.0);
-  return clamp((0.38 + filament) * radialBands, 0.0, 1.25);
+
+  // Advect a continuous Cartesian noise field instead of painting radial
+  // sine bands. The logarithmic twist seeds trailing structures while the
+  // Keplerian omega shears them at different rates across the disk.
+  float spiralPhase = phase + 1.35 * log(radius / INNER_DISK_RADIUS);
+  vec2 flowPosition = radius * vec2(cos(spiralPhase), sin(spiralPhase));
+  vec2 broadUv = flowPosition * 0.115;
+
+  // Three cache-friendly samples give us domain-warped broad turbulence and
+  // thin ridges. There is no particle loop and no extra render pass.
+  float warp = texture(uNoiseTexture, broadUv * 0.61 + vec2(0.37, 0.71)).r * 2.0 - 1.0;
+  float broad = texture(uNoiseTexture, broadUv + warp * vec2(0.24, -0.19)).r;
+  float fine = texture(
+    uNoiseTexture,
+    broadUv * 3.7 + warp * vec2(-0.53, 0.41) + vec2(0.13, 0.47)
+  ).r;
+
+  float ridge = 1.0 - abs(fine * 2.0 - 1.0);
+  ridge = ridge * ridge * ridge;
+  float cloud = smoothstep(0.16, 0.9, broad);
+  return clamp(0.12 + 0.78 * cloud + 0.38 * ridge * cloud, 0.0, 1.18);
 }
 
 vec4 diskColor(vec2 position, float coordinateTime, bool topSide, float shiftFactor) {
@@ -259,12 +273,14 @@ vec4 diskColor(vec2 position, float coordinateTime, bool topSide, float shiftFac
   float edge = smoothstep(INNER_DISK_RADIUS, INNER_DISK_RADIUS * 1.06, radius) *
     (1.0 - smoothstep(OUTER_DISK_RADIUS * 0.91, OUTER_DISK_RADIUS, radius));
   float shift = uDopplerEnabled == 1 ? clamp(shiftFactor, 0.18, 4.0) : 1.0;
-  float temperature = uDiskTemperature * diskTemperatureProfile(radius) * shift;
+  float thermalVariation = mix(0.88, 1.08, clamp(density, 0.0, 1.0));
+  float temperature = uDiskTemperature * diskTemperatureProfile(radius) * shift * thermalVariation;
   vec3 radiance = blackBodyRadiance(temperature);
-  float structure = 0.32 + uDiskDensity * density;
   float sideAttenuation = topSide ? 1.0 : 0.82;
-  float alpha = edge * uDiskOpacity * clamp(0.45 + density * 0.5, 0.0, 1.0);
-  return vec4(radiance * structure * sideAttenuation * edge, alpha);
+  float opticalDepth = edge * uDiskOpacity * (0.25 + 1.1 * uDiskDensity * density);
+  float alpha = 1.0 - exp(-opticalDepth);
+  float emissivity = alpha * (0.9 + 1.15 * uDiskDensity * density);
+  return vec4(radiance * emissivity * sideAttenuation, alpha);
 }
 
 vec3 sceneColor(vec3 viewDirection) {

@@ -77,7 +77,7 @@ g = \frac{\nu_{obs}}{\nu_{emit}}
 
 which combines gravitational redshift and orbital Doppler shift. Since `I_ν/ν³` is invariant and a shifted black body remains a black body, the observed visible spectrum is sampled at `T_obs = g T_eff` from a CIE/Planck lookup table.
 
-The animated density filaments are procedural and are advected with the Schwarzschild Keplerian angular-rate dependence `Ω ∝ r^{-3/2}`. They provide spatial detail; they are not a fluid or GRMHD simulation.
+The animated density filaments are procedural and are advected with the Schwarzschild Keplerian angular-rate dependence `Ω ∝ r^{-3/2}`. V1.1 samples a continuous Cartesian noise field after a logarithmic spiral twist, then uses a small domain warp and ridge transform to avoid periodic radial bands. The resulting density perturbs effective temperature, emissivity, and optical depth. It provides spatial detail; it is not a fluid or GRMHD simulation.
 
 ## Celestial background
 
@@ -98,7 +98,7 @@ Automated tests pin the following independent analytic facts:
 - the static observer tetrad is orthogonal and has the correct radial lapse;
 - lookup coordinate mappings place the two critical branches and apsis correctly.
 
-The upstream project additionally compares its precomputed texture queries against direct numerical integration. V1.1 will add image-level comparisons against both that renderer and an independent CPU oracle.
+The upstream project additionally compares its precomputed texture queries against direct numerical integration. V1.2 will add image-level comparisons against both that renderer and an independent CPU oracle.
 
 ## References
 

@@ -15,6 +15,7 @@ The render path is deliberately bounded:
 - no per-ray integration loop;
 - fixed lookup count for lensing and disk intersection;
 - at most two disk-shading evaluations;
+- three small, mipmapped noise samples per visible disk hit;
 - no compulsory post-processing chain.
 
 The 2048×1024 Milky Way panorama adds 284 KiB to the transfer and approximately 10.7 MiB of GPU memory including mip levels. It replaces the previous CPU-generated sky without adding a render pass or per-frame upload.

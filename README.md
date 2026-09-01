@@ -2,7 +2,7 @@
 
 A performance-first, physically grounded black-hole renderer for the web.
 
-Version 1 renders a non-rotating Schwarzschild black hole with a thin accretion disk. The project name reflects the destination: a validated Kerr renderer. Schwarzschild is the zero-spin (`a* = 0`) member of that family.
+Version 1.1 renders a non-rotating Schwarzschild black hole with a thin accretion disk. The project name reflects the destination: a validated Kerr renderer. Schwarzschild is the zero-spin (`a* = 0`) member of that family.
 
 ## Why this is different
 
@@ -47,7 +47,7 @@ exercises the controls, and saves a rendered screenshot as a workflow artifact.
 - Toggle the disk, relativistic frequency shift, background sky, and animation.
 - Select adaptive, performance, balanced, or high-fidelity render resolution.
 
-Distances use the Schwarzschild radius, `r_s = 2GM/c²`, as the unit. In V1:
+Distances use the Schwarzschild radius, `r_s = 2GM/c²`, as the unit. In V1.1:
 
 | Quantity | Radius |
 | --- | ---: |
@@ -61,6 +61,7 @@ Distances use the Schwarzschild radius, `r_s = 2GM/c²`, as the unit. In V1:
 - One oversized full-screen triangle; no scene meshes or depth buffer.
 - Constant-time beam tracing through two small floating-point lookup textures.
 - A single render pass with no mandatory bloom chain.
+- Domain-warped accretion turbulence uses three cached noise samples per visible disk hit; there is no particle loop.
 - High-performance WebGL context and no MSAA.
 - Render resolution drops temporarily during interaction.
 - Adaptive mode targets 60 fps using an exponential moving average of frame time.
@@ -75,18 +76,19 @@ V1 is a physically grounded renderer of a specific model, not a prediction of on
 
 - Light propagation follows Schwarzschild null geodesics up to lookup-table interpolation error.
 - The disk is geometrically and optically thin and begins at the Schwarzschild ISCO.
-- Disk temperature follows the standard zero-torque radial profile, while small-scale density texture is procedural.
+- Disk temperature follows the standard zero-torque radial profile. V1.1 advects a domain-warped procedural density field with differential Keplerian rotation and couples it to temperature, emissivity, and effective optical depth.
 - The background is an ESO photographic panorama for visual context, not a Gaia-calibrated astrometric or photometric dataset.
 - The star-texture filtering does not implement the full ray-bundle magnification filter from DNGR.
 - Exposure and tone mapping are display choices; absolute brightness depends on mass, accretion rate, wavelength band, and instrument.
-- V1 has no spin, frame dragging, polarization, volumetric transfer, magnetic field, or GRMHD flow.
+- V1.1 has no spin, frame dragging, polarization, volumetric transfer, magnetic field, or GRMHD flow.
 
 These boundaries are intentional and visible in [docs/physics.md](docs/physics.md).
 
 ## Roadmap
 
 - **V1 — Schwarzschild:** constant-time beam tracing, relativistic thin disk, performance governor, analytic anchors.
-- **V1.1 — validation:** golden-image comparisons against the reference renderer and browser GPU benchmarks.
+- **V1.1 — accretion flow:** seamless domain-warped turbulence, differential rotation, and coupled thermal/opacity structure without particles or additional passes.
+- **V1.2 — validation:** golden-image comparisons against the reference renderer and browser GPU benchmarks.
 - **V2 — Kerr:** spin-dependent horizon, photon region and ISCO; Kerr null geodesics; frame dragging.
 - **V3 — radiative transfer:** optically thin volume emission/absorption and optional scientific datasets.
 
