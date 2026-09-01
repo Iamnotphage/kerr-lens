@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta
       name="description"
-      content="A performance-first, physically grounded Schwarzschild black hole renderer for the web."
+      content="A performance-first, numerically validated Schwarzschild black hole renderer for the web."
     />
     <meta name="theme-color" content="#03050a" />
-    <title>Kerr Lens — Schwarzschild V1.2.1</title>
+    <title>Kerr Lens — Schwarzschild V1.3</title>
   </head>
   <body>
     <main id="app">
@@ -21,7 +21,7 @@
           <span class="brand__dot" aria-hidden="true"></span>
           KERR LENS
         </a>
-        <span class="brand__version">SCHWARZSCHILD / V1.2.1</span>
+        <span class="brand__version">SCHWARZSCHILD / V1.3</span>
       </header>
 
       <section class="hero-copy" aria-label="Visualization summary">
@@ -131,6 +131,22 @@
         <span id="frame-time">-- MS</span>
         <span id="render-scale">--%</span>
       </div>
+
+      <section class="benchmark-panel" id="benchmark-panel" data-state="idle" hidden>
+        <p class="eyebrow">V1.3 VALIDATION MODE</p>
+        <h2>Fixed-scene frame benchmark</h2>
+        <p id="benchmark-phase">Preparing shader and assets</p>
+        <div class="benchmark-grid">
+          <div><span>SAMPLES</span><output id="benchmark-samples">0 / 600</output></div>
+          <div><span>MEDIAN</span><output id="benchmark-median">—</output></div>
+          <div><span>P95</span><output id="benchmark-p95">—</output></div>
+          <div><span>P99</span><output id="benchmark-p99">—</output></div>
+          <div><span>BUFFER</span><output id="benchmark-buffer">—</output></div>
+          <div><span>DRAW PATH</span><output id="benchmark-draws">1 call · 1 tri</output></div>
+        </div>
+        <p class="benchmark-gpu" id="benchmark-gpu">Detecting GPU…</p>
+        <button class="benchmark-copy" id="benchmark-copy" type="button">Copy JSON report</button>
+      </section>
 
       <div class="gesture-hint" id="gesture-hint">
         <span class="mouse-icon" aria-hidden="true"></span>

@@ -168,9 +168,15 @@ Automated tests pin the following independent analytic facts:
 - the Page–Thorne flux vanishes at `3 r_s`, peaks at `4.7754566 r_s`, and tends to `R⁻³`;
 - `η = 1 - √(8/9)` and `T_peak ∝ (λ/M)¹/⁴`;
 - the static observer tetrad is orthogonal and has the correct radial lapse;
-- lookup coordinate mappings place the two critical branches and apsis correctly.
+- lookup coordinate mappings place the two critical branches and apsis correctly;
+- an independent bisection plus Simpson-integration oracle reproduces the weak-field
+  expansion; and
+- seven scattering rays from `b = 2.7–100 r_s` agree with the precomputed deflection
+  texture to within `3×10^-5 rad` at the apsis.
 
-The upstream project additionally compares its precomputed texture queries against direct numerical integration. V1.3 will add image-level comparisons against both that renderer and an independent CPU oracle.
+CI additionally captures both disk materials at `8°`, `45°`, and `85°` inclination,
+including a near-face-on seam probe. The matrix is evidence for human image review;
+the CPU oracle is the numerical correctness gate. See [validation.md](validation.md).
 
 ## References
 

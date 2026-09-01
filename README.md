@@ -2,7 +2,7 @@
 
 A performance-first, physically grounded black-hole renderer for the web.
 
-Version 1.2.1 renders a non-rotating Schwarzschild black hole with two explicitly separated disk presentations: a physically normalized Novikov–Thorne/Page–Thorne thermal disk and a default DNGR-inspired cinematic preset. The project name reflects the destination: a validated Kerr renderer. Schwarzschild is the zero-spin (`a* = 0`) member of that family.
+Version 1.3 renders a numerically validated, non-rotating Schwarzschild black hole with two explicitly separated disk presentations: a physically normalized Novikov–Thorne/Page–Thorne thermal disk and a default DNGR-inspired cinematic preset. The project name reflects the destination: a validated Kerr renderer. Schwarzschild is the zero-spin (`a* = 0`) member of that family.
 
 ## Why this is different
 
@@ -34,10 +34,16 @@ Then open the URL printed by Vite.
 npm run check
 ```
 
-`check` runs the analytic/unit tests, physics-asset integrity checks, TypeScript
-validation, and a production build.
+`check` runs the analytic/unit tests, an independent CPU geodesic oracle,
+physics-asset integrity checks, TypeScript validation, and a production build.
 CI additionally launches Chromium with software WebGL, compiles the GLSL program,
-exercises the controls, and saves a rendered screenshot as a workflow artifact.
+exercises the controls, captures a six-view validation matrix, runs a fixed-scene
+frame benchmark, and saves the evidence as a workflow artifact.
+
+Open `?benchmark=1` to run the V1.3 benchmark on the current browser. It discards
+90 warm-up frames, samples 600 steady-state frames by default, and reports median,
+p95, and p99 frame intervals with GPU and drawing-buffer metadata. Use
+`?benchmark=1&frames=1200` for a longer run and copy the JSON report from the panel.
 
 ## Controls
 
@@ -49,7 +55,7 @@ exercises the controls, and saves a rendered screenshot as a workflow artifact.
 - Toggle the disk, relativistic frequency shift, background sky, and animation. The cinematic preset disables frequency shift by default, matching the final film presentation; the scientific preset enables it.
 - Select adaptive, performance, balanced, or high-fidelity render resolution.
 
-Mass and Eddington ratio are logarithmic controls spanning `10⁷–10¹⁰ M☉` and `0.01–0.316 L_Edd`. Distances use the Schwarzschild radius, `r_s = 2GM/c²`, as the unit. In V1.2:
+Mass and Eddington ratio are logarithmic controls spanning `10⁷–10¹⁰ M☉` and `0.01–0.316 L_Edd`. Distances use the Schwarzschild radius, `r_s = 2GM/c²`, as the unit. In V1.3:
 
 | Quantity | Radius |
 | --- | ---: |
@@ -73,6 +79,8 @@ Mass and Eddington ratio are logarithmic controls spanning `10⁷–10¹⁰ M☉
 - A 2048×1024 Milky Way panorama is loaded once and sampled as a mipmapped texture (284 KiB compressed).
 
 See [docs/performance.md](docs/performance.md) for budgets and measurement rules.
+See [docs/validation.md](docs/validation.md) for the numerical oracle, visual matrix,
+and regression policy.
 
 ## Scientific scope and limitations
 
@@ -90,7 +98,7 @@ V1 is a physically grounded renderer of a specific model, not a prediction of on
 - The background is an ESO photographic panorama for visual context, not a Gaia-calibrated astrometric or photometric dataset.
 - The star-texture filtering does not implement the full ray-bundle magnification filter from DNGR.
 - Exposure and tone mapping are display choices; absolute brightness depends on mass, accretion rate, wavelength band, and instrument.
-- V1.2 has no spin, frame dragging, polarization, finite disk thickness, returning radiation, limb darkening, magnetic stress, or GRMHD flow.
+- V1.3 has no spin, frame dragging, polarization, finite disk thickness, returning radiation, limb darkening, magnetic stress, or GRMHD flow.
 
 These boundaries are intentional and visible in [docs/physics.md](docs/physics.md).
 
@@ -100,9 +108,13 @@ These boundaries are intentional and visible in [docs/physics.md](docs/physics.m
 - **V1.1 — accretion flow:** seamless domain-warped turbulence, differential rotation, and coupled thermal/opacity structure without particles or additional passes.
 - **V1.2 — physical thermal disk:** exact Schwarzschild Page–Thorne flux, mass/accretion normalization, color hardening, and an optically thick surface material.
 - **V1.2.1 — appearance calibration:** separate scientific and DNGR-inspired cinematic materials without particles or another render pass.
-- **V1.3 — validation:** golden-image comparisons against the reference renderer and browser GPU benchmarks.
-- **V2 — Kerr:** spin-dependent horizon, photon region and ISCO; Kerr null geodesics; frame dragging.
-- **V3 — radiative transfer:** optically thin volume emission/absorption and optional scientific datasets.
+- **V1.3 — validation:** independent CPU deflection oracle, six-view browser evidence matrix, and exportable frame-time distributions.
+- **V2.0 — Kerr framework:** spin-dependent horizons, ergosphere, equatorial photon orbits, ISCO, orbital frequency, and radiative efficiency, with an exact `a* = 0` Schwarzschild regression.
+- **V2.1 — Kerr lensing:** Kerr null geodesics and frame dragging in the image.
+- **V2.2 — Kerr thin disk:** spin-dependent Novikov–Thorne emission and emitter frequency shift.
+
+EHT-style optically thin plasma and GRMHD rendering are intentionally outside the
+current thin-disk roadmap.
 
 ## Attribution and license
 

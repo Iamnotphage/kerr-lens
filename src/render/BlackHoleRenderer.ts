@@ -32,6 +32,15 @@ export interface RendererSettings {
   paused: boolean;
 }
 
+export interface RendererDiagnostics {
+  readonly vendor: string;
+  readonly renderer: string;
+  readonly webglVersion: string;
+  readonly shadingLanguageVersion: string;
+  readonly drawCalls: number;
+  readonly triangles: number;
+}
+
 export class BlackHoleRenderer {
   readonly renderer: WebGLRenderer;
 
@@ -167,6 +176,25 @@ export class BlackHoleRenderer {
 
   getDrawingBufferSize(): Vector2 {
     return this.renderer.getDrawingBufferSize(new Vector2());
+  }
+
+  getDiagnostics(): RendererDiagnostics {
+    const context = this.renderer.getContext();
+    const debugInfo = context.getExtension("WEBGL_debug_renderer_info") as {
+      readonly UNMASKED_VENDOR_WEBGL: number;
+      readonly UNMASKED_RENDERER_WEBGL: number;
+    } | null;
+    const parameter = (name: number): string => String(context.getParameter(name) ?? "unknown");
+    return {
+      vendor: debugInfo ? parameter(debugInfo.UNMASKED_VENDOR_WEBGL) : parameter(context.VENDOR),
+      renderer: debugInfo
+        ? parameter(debugInfo.UNMASKED_RENDERER_WEBGL)
+        : parameter(context.RENDERER),
+      webglVersion: parameter(context.VERSION),
+      shadingLanguageVersion: parameter(context.SHADING_LANGUAGE_VERSION),
+      drawCalls: this.renderer.info.render.calls,
+      triangles: this.renderer.info.render.triangles,
+    };
   }
 
   dispose(): void {
