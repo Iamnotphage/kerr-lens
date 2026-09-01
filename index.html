@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="A performance-first, physically grounded Schwarzschild black hole renderer for the web."
+    />
+    <meta name="theme-color" content="#03050a" />
+    <title>Kerr Lens — Schwarzschild V1</title>
+  </head>
+  <body>
+    <main id="app">
+      <canvas id="scene" aria-label="Interactive Schwarzschild black hole visualization"></canvas>
+
+      <div class="vignette" aria-hidden="true"></div>
+
+      <header class="brand">
+        <a class="brand__mark" href="https://github.com/Iamnotphage/kerr-lens" target="_blank" rel="noreferrer">
+          <span class="brand__dot" aria-hidden="true"></span>
+          KERR LENS
+        </a>
+        <span class="brand__version">SCHWARZSCHILD / V1</span>
+      </header>
+
+      <section class="hero-copy" aria-label="Visualization summary">
+        <p class="eyebrow">PRECOMPUTED BEAM TRACING</p>
+        <h1>Light follows<br /><em>curved spacetime.</em></h1>
+        <p class="hero-copy__detail">
+          Every visible distortion is mapped from Schwarzschild null geodesics — not a screen-space warp.
+        </p>
+      </section>
+
+      <aside class="panel" id="control-panel" aria-label="Simulation controls">
+        <div class="panel__header">
+          <div>
+            <p class="eyebrow">OBSERVER FRAME</p>
+            <h2>Physical controls</h2>
+          </div>
+          <button class="icon-button" id="toggle-panel" type="button" aria-label="Collapse controls" aria-expanded="true">
+            <span></span><span></span>
+          </button>
+        </div>
+
+        <div class="panel__body" id="panel-body">
+          <div class="control">
+            <div class="control__label"><label for="inclination">Inclination</label><output id="inclination-value">68°</output></div>
+            <input id="inclination" type="range" min="5" max="88" step="1" value="68" />
+          </div>
+
+          <div class="control">
+            <div class="control__label"><label for="distance">Distance</label><output id="distance-value">16.0 rₛ</output></div>
+            <input id="distance" type="range" min="7" max="40" step="0.1" value="16" />
+          </div>
+
+          <div class="control">
+            <div class="control__label"><label for="temperature">Peak temperature</label><output id="temperature-value">7,200 K</output></div>
+            <input id="temperature" type="range" min="2500" max="16000" step="100" value="7200" />
+          </div>
+
+          <div class="control">
+            <div class="control__label"><label for="exposure">Exposure</label><output id="exposure-value">1.00</output></div>
+            <input id="exposure" type="range" min="0.2" max="2.5" step="0.05" value="1" />
+          </div>
+
+          <div class="control control--select">
+            <label for="quality">Render quality</label>
+            <select id="quality">
+              <option value="auto" selected>Adaptive · 60 fps</option>
+              <option value="performance">Performance</option>
+              <option value="balanced">Balanced</option>
+              <option value="high">High fidelity</option>
+            </select>
+          </div>
+
+          <div class="switches">
+            <label class="switch"><span>Accretion disk</span><input id="disk-enabled" type="checkbox" checked /><i></i></label>
+            <label class="switch"><span>Relativistic shift</span><input id="doppler-enabled" type="checkbox" checked /><i></i></label>
+            <label class="switch"><span>Background sky</span><input id="sky-enabled" type="checkbox" checked /><i></i></label>
+            <label class="switch"><span>Pause motion</span><input id="paused" type="checkbox" /><i></i></label>
+          </div>
+
+          <div class="science-card">
+            <div><span>EVENT HORIZON</span><strong>1.000 rₛ</strong></div>
+            <div><span>PHOTON SPHERE</span><strong>1.500 rₛ</strong></div>
+            <div><span>ISCO</span><strong>3.000 rₛ</strong></div>
+            <div><span>SHADOW RADIUS</span><strong>2.598 rₛ</strong></div>
+          </div>
+
+          <button class="reset-button" id="reset-view" type="button">Reset observer</button>
+        </div>
+      </aside>
+
+      <div class="status" role="status" aria-live="polite">
+        <span class="status__live"><i></i>LIVE</span>
+        <span id="fps">-- FPS</span>
+        <span id="frame-time">-- MS</span>
+        <span id="render-scale">--%</span>
+      </div>
+
+      <div class="gesture-hint" id="gesture-hint">
+        <span class="mouse-icon" aria-hidden="true"></span>
+        DRAG TO ORBIT · SCROLL TO MOVE
+      </div>
+
+      <div class="loading" id="loading" role="status">
+        <div class="loading__ring"></div>
+        <p>Loading geodesic tables</p>
+        <span id="loading-progress">0%</span>
+      </div>
+
+      <div class="fatal-error" id="fatal-error" hidden>
+        <p class="eyebrow">RENDERER UNAVAILABLE</p>
+        <h2>WebGL 2 is required.</h2>
+        <p id="fatal-error-detail">This browser or GPU cannot run the Schwarzschild renderer.</p>
+      </div>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

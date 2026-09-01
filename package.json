@@ -1,0 +1,28 @@
+{
+  "name": "kerr-lens",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "test:assets": "node scripts/verify-assets.mjs",
+    "test:e2e": "playwright test",
+    "test:watch": "vitest",
+    "check": "npm run test && npm run test:assets && npm run build"
+  },
+  "dependencies": {
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/three": "^0.185.4",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
