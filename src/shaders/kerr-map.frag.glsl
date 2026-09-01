@@ -47,34 +47,43 @@ float polarPotential(float cosineTheta, float lambda, float eta) {
     uSpin * uSpin * cosineSquared * cosineSquared;
 }
 
-vec4 rayDerivative(
-  float radius,
-  float cosineTheta,
-  float radialSign,
-  float polarSign,
+void minoDerivative(
+  vec4 position,
+  vec2 velocity,
   float lambda,
-  float eta
+  float eta,
+  out vec4 coordinateDerivative,
+  out vec2 velocityDerivative
 ) {
+  float radius = position.x;
+  float cosineTheta = position.y;
   float radiusSquared = radius * radius;
   float spinSquared = uSpin * uSpin;
   float cosineSquared = cosineTheta * cosineTheta;
-  float sigma = radiusSquared + spinSquared * cosineSquared;
   float delta = max(radiusSquared - 2.0 * radius + spinSquared, 1e-5);
   float p = radiusSquared + spinSquared - uSpin * lambda;
-  float radial = sqrt(max(radialPotential(radius, lambda, eta), 0.0));
-  float polar = sqrt(max(polarPotential(cosineTheta, lambda, eta), 0.0));
+  float shiftedMomentum = lambda - uSpin;
+  float radialConstant = shiftedMomentum * shiftedMomentum + eta;
   float sineSquared = max(1.0 - cosineSquared, 1e-5);
   float phiMino = lambda / sineSquared - uSpin + uSpin * p / delta;
   float timeMino = uSpin * (lambda - uSpin * sineSquared) +
     (radiusSquared + spinSquared) * p / delta;
 
-  // The constants describe the future photon arriving at the observer. We
-  // integrate the same curve backward, hence the minus signs on phi and time.
-  return vec4(
-    radialSign * radial / sigma,
-    polarSign * polar / sigma,
-    -phiMino / sigma,
-    -timeMino / sigma
+  // The constants describe the future photon arriving at the observer. The
+  // radial and polar velocities already point backward; phi and t therefore
+  // carry the explicit parameter-reversal signs.
+  coordinateDerivative = vec4(
+    velocity.x,
+    velocity.y,
+    -phiMino,
+    -timeMino
+  );
+  // Differentiating (dr/dgamma)^2 = R and (dmu/dgamma)^2 = M
+  // gives continuous equations through both Carter turning points.
+  velocityDerivative = vec2(
+    2.0 * radius * p - (radius - 1.0) * radialConstant,
+    (spinSquared - eta - lambda * lambda) * cosineTheta -
+      2.0 * spinSquared * cosineTheta * cosineSquared
   );
 }
 
@@ -121,10 +130,12 @@ void main() {
     cosineTheta * cosineTheta *
       (lambda * lambda / max(sineTheta * sineTheta, 1e-6) - spinSquared);
 
-  float radialSign = -1.0;
-  float polarSign = backwardDirection.y >= 0.0 ? 1.0 : -1.0;
-  float phi = 0.0;
-  float coordinateTime = 0.0;
+  vec4 position = vec4(radius, cosineTheta, 0.0, 0.0);
+  vec2 velocity = vec2(
+    -sqrt(max(radialPotential(radius, lambda, eta), 0.0)),
+    (backwardDirection.y >= 0.0 ? 1.0 : -1.0) *
+      sqrt(max(polarPotential(cosineTheta, lambda, eta), 0.0))
+  );
   float outerHorizon = 1.0 + sqrt(max(1.0 - spinSquared, 0.0));
   float escapeRadius = max(initialRadius + 20.0, 72.0);
   bool escaped = false;
@@ -132,81 +143,63 @@ void main() {
   int hitCount = 0;
 
   for (int stepIndex = 0; stepIndex < MAX_STEPS; stepIndex += 1) {
-    if (radius <= outerHorizon + 0.025) {
+    if (position.x <= outerHorizon + 0.025) {
       captured = true;
       break;
     }
-    if (radialSign > 0.0 && radius >= escapeRadius) {
+    if (velocity.x > 0.0 && position.x >= escapeRadius) {
       escaped = true;
       break;
     }
 
-    float stepSize = mix(
+    float targetCoordinateStep = mix(
       0.075,
       1.65,
-      smoothstep(outerHorizon + 0.3, 28.0, radius)
+      smoothstep(outerHorizon + 0.3, 28.0, position.x)
     );
-    vec4 derivative = rayDerivative(
-      radius,
-      cosineTheta,
-      radialSign,
-      polarSign,
+    vec4 coordinateDerivative;
+    vec2 velocityDerivative;
+    minoDerivative(
+      position,
+      velocity,
       lambda,
-      eta
+      eta,
+      coordinateDerivative,
+      velocityDerivative
     );
-    vec4 midpoint = vec4(radius, cosineTheta, phi, coordinateTime) +
-      derivative * (0.5 * stepSize);
+    float minoStep = targetCoordinateStep / max(abs(velocity.x), 0.5);
+    minoStep = min(minoStep, 0.025 / max(abs(velocity.y), 0.25));
+    minoStep = min(minoStep, 0.14 / max(abs(coordinateDerivative.z), 0.5));
+    minoStep = clamp(minoStep, 1e-5, 0.05);
 
-    if (radialPotential(midpoint.x, lambda, eta) < -2e-4) {
-      radialSign = -radialSign;
-      continue;
-    }
-    // Boyer–Lindquist azimuth is singular on the spin axis. A ray entering
-    // this polar chart cap exits on the opposite meridian: phi changes by pi
-    // while the physical Cartesian direction stays continuous. Resolving the
-    // lambda/sin²(theta) spike with uniform affine steps causes a false
-    // vertical seam, so perform the equivalent chart transition explicitly.
-    if (abs(midpoint.y) >= POLAR_CHART_CAP) {
-      polarSign = -polarSign;
-      phi += polarChartAzimuthJump(lambda, eta);
-      continue;
-    }
-    if (
-      abs(midpoint.y) >= 0.999999 ||
-      polarPotential(midpoint.y, lambda, eta) < -2e-5
-    ) {
-      polarSign = -polarSign;
-      continue;
-    }
-
-    vec4 midpointDerivative = rayDerivative(
-      midpoint.x,
-      midpoint.y,
-      radialSign,
-      polarSign,
+    vec4 midpointPosition = position + coordinateDerivative * (0.5 * minoStep);
+    vec2 midpointVelocity = velocity + velocityDerivative * (0.5 * minoStep);
+    vec4 midpointCoordinateDerivative;
+    vec2 midpointVelocityDerivative;
+    minoDerivative(
+      midpointPosition,
+      midpointVelocity,
       lambda,
-      eta
+      eta,
+      midpointCoordinateDerivative,
+      midpointVelocityDerivative
     );
-    vec4 next = vec4(radius, cosineTheta, phi, coordinateTime) +
-      midpointDerivative * stepSize;
+    vec4 next = position + midpointCoordinateDerivative * minoStep;
+    vec2 nextVelocity = velocity + midpointVelocityDerivative * minoStep;
 
-    if (radialPotential(next.x, lambda, eta) < -5e-4) {
-      radialSign = -radialSign;
-      continue;
-    }
+    // Boyer–Lindquist azimuth is singular on the spin axis. Reflect the polar
+    // chart coordinate at a small cap and add the integrated azimuth skipped
+    // inside it; the physical Cartesian direction remains continuous.
     if (abs(next.y) >= POLAR_CHART_CAP) {
-      polarSign = -polarSign;
-      phi += polarChartAzimuthJump(lambda, eta);
-      continue;
-    }
-    if (abs(next.y) >= 1.0 || polarPotential(next.y, lambda, eta) < -5e-5) {
-      polarSign = -polarSign;
-      continue;
+      float pole = next.y >= 0.0 ? 1.0 : -1.0;
+      next.y = pole * (2.0 * POLAR_CHART_CAP - abs(next.y));
+      nextVelocity.y = -nextVelocity.y;
+      next.z += polarChartAzimuthJump(lambda, eta);
     }
 
-    if (cosineTheta * next.y <= 0.0 && cosineTheta != next.y) {
-      float crossing = clamp(cosineTheta / (cosineTheta - next.y), 0.0, 1.0);
-      float hitRadiusM = mix(radius, next.x, crossing);
+    if (position.y * next.y <= 0.0 && position.y != next.y) {
+      float crossing = clamp(position.y / (position.y - next.y), 0.0, 1.0);
+      float hitRadiusM = mix(position.x, next.x, crossing);
       float hitRadiusRs = hitRadiusM * 0.5;
       if (
         hitRadiusRs >= INNER_DISK_RADIUS_RS * 0.985 &&
@@ -214,8 +207,8 @@ void main() {
       ) {
         vec4 hit = encodedDiskHit(
           hitRadiusM,
-          mix(phi, next.z, crossing),
-          mix(coordinateTime, next.w, crossing)
+          mix(position.z, next.z, crossing),
+          mix(position.w, next.w, crossing)
         );
         if (hitCount == 0) diskHit0 = hit;
         else if (hitCount == 1) diskHit1 = hit;
@@ -223,21 +216,20 @@ void main() {
       }
     }
 
-    radius = next.x;
-    cosineTheta = clamp(next.y, -0.999999, 0.999999);
-    phi = next.z;
-    coordinateTime = max(next.w, -130000.0);
+    next.w = max(next.w, -130000.0);
+    position = next;
+    velocity = nextVelocity;
   }
 
-  if (!escaped && !captured && radialSign > 0.0 && radius > 8.0) {
+  if (!escaped && !captured && velocity.x > 0.0 && position.x > 8.0) {
     escaped = true;
   }
   if (escaped) {
-    float sine = sqrt(max(1.0 - cosineTheta * cosineTheta, 0.0));
+    float sine = sqrt(max(1.0 - position.y * position.y, 0.0));
     skyTransfer = vec4(
-      sine * cos(phi),
-      sine * sin(phi),
-      cosineTheta,
+      sine * cos(position.z),
+      sine * sin(position.z),
+      position.y,
       1.0
     );
   }

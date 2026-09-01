@@ -161,7 +161,16 @@ Using `mu` removes a sine/cosine pair from every step and gives the polynomial
 \eta+(a^2-\eta-\lambda^2)\mu^2-a^2\mu^4.
 \]
 
-Radial and polar signs reverse only at their respective potential turning points.
+Rather than carrying discrete radial and polar signs, the shader evolves their Mino
+velocities with the continuous equations
+
+\[
+\frac{d^2r}{d\gamma^2}=\frac{1}{2}\frac{dR}{dr},\qquad
+\frac{d^2\mu}{d\gamma^2}=\frac{1}{2}\frac{dM}{d\mu}.
+\]
+
+The velocities therefore pass smoothly through zero at Carter turning points; no
+pixel-dependent sign flip is needed.
 Because Boyer–Lindquist azimuth is undefined on the spin axis, the GPU performs an
 explicit polar-chart transition when a ray enters a small cap. The skipped azimuth
 is the near-axis integral determined by the exact polar turning root; it tends to
