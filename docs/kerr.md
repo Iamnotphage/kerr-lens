@@ -190,6 +190,12 @@ The transfer map therefore always supplies its last finite sky direction: rays t
 linger near the photon region beyond the fixed step budget cannot turn into a false
 black halo outside the exact curve.
 
+At display time, the two approximately one-texel-wide transfer-map chart axes are
+reconstructed from values immediately on both sides. Kerr geodesic fields are physically
+continuous there; this narrow reconstruction prevents finite map sampling from exposing
+the coordinate chart as horizontal or vertical image cuts without filtering the rest of
+the frame.
+
 ## Exact critical curve
 
 For an unstable spherical photon orbit at `r` in `M` units, V2.1 independently

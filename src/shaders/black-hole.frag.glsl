@@ -486,6 +486,38 @@ vec2 rotateDiskPosition(vec2 position, float azimuth) {
   );
 }
 
+vec4 sampleTransferAcrossX(sampler2D transferMap, vec2 uv, vec2 texelSize) {
+  float halfBand = 1.35 * texelSize.x;
+  float axisDistance = uv.x - 0.5;
+  if (abs(axisDistance) >= halfBand) return texture(transferMap, uv);
+  vec4 negativeSide = texture(transferMap, vec2(0.5 - halfBand, uv.y));
+  vec4 positiveSide = texture(transferMap, vec2(0.5 + halfBand, uv.y));
+  float blend = smoothstep(-halfBand, halfBand, axisDistance);
+  return mix(negativeSide, positiveSide, blend);
+}
+
+/** Reconstruct the physically continuous field across BL chart-axis texels. */
+vec4 sampleKerrTransfer(sampler2D transferMap, vec2 uv) {
+  vec2 texelSize = 1.0 / vec2(textureSize(transferMap, 0));
+  float halfBand = 1.35 * texelSize.y;
+  float axisDistance = uv.y - 0.5;
+  if (abs(axisDistance) >= halfBand) {
+    return sampleTransferAcrossX(transferMap, uv, texelSize);
+  }
+  vec4 negativeSide = sampleTransferAcrossX(
+    transferMap,
+    vec2(uv.x, 0.5 - halfBand),
+    texelSize
+  );
+  vec4 positiveSide = sampleTransferAcrossX(
+    transferMap,
+    vec2(uv.x, 0.5 + halfBand),
+    texelSize
+  );
+  float blend = smoothstep(-halfBand, halfBand, axisDistance);
+  return mix(negativeSide, positiveSide, blend);
+}
+
 float kerrScreenLambda(vec2 screen) {
   float focalLength = 1.0 / tan(uFovY * 0.5);
   vec3 backwardDirection = normalize(vec3(screen, -focalLength));
@@ -533,7 +565,7 @@ float v21FrequencyShift(float radiusRs, float lambda) {
 
 vec3 kerrSceneColor(vec2 screen) {
   vec2 transferUv = gl_FragCoord.xy / uResolution;
-  vec4 skyTransfer = texture(uKerrSkyTexture, transferUv);
+  vec4 skyTransfer = sampleKerrTransfer(uKerrSkyTexture, transferUv);
   vec2 shadowOffset = screen - uKerrShadowCenter;
   float shadowAngle = atan(shadowOffset.y, shadowOffset.x) / TAU + 0.5;
   float shadowRadius = texture(uKerrShadowTexture, vec2(shadowAngle, 0.5)).r;
@@ -548,7 +580,7 @@ vec3 kerrSceneColor(vec2 screen) {
   vec3 color = skyColor(sourceDirection) * escaped;
 
   float lambda = kerrScreenLambda(screen);
-  vec4 hit1 = texture(uKerrDiskHit1Texture, transferUv);
+  vec4 hit1 = sampleKerrTransfer(uKerrDiskHit1Texture, transferUv);
   float hitCoverage1 = smoothstep(0.2, 0.8, hit1.a);
   if (hitCoverage1 > 0.0) {
     float hitWeight = max(hit1.a, 1e-4);
@@ -558,7 +590,7 @@ vec3 kerrSceneColor(vec2 screen) {
     color = color * (1.0 - disk.a * hitCoverage1) + disk.rgb * hitCoverage1;
   }
 
-  vec4 hit0 = texture(uKerrDiskHit0Texture, transferUv);
+  vec4 hit0 = sampleKerrTransfer(uKerrDiskHit0Texture, transferUv);
   float hitCoverage0 = smoothstep(0.2, 0.8, hit0.a);
   if (hitCoverage0 > 0.0) {
     float hitWeight = max(hit0.a, 1e-4);

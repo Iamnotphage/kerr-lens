@@ -108,7 +108,8 @@ renderer waits 55 ms for a stream of input events to settle, performs one offscr
 draw with a fixed 224-step Carter integrator, then returns to the steady-state contract:
 
 - one display draw call and one full-screen triangle;
-- three coherent transfer samples plus one one-dimensional shadow sample;
+- three base transfer samples plus one one-dimensional shadow sample; only two
+  approximately one-texel-wide chart-axis strips use extra taps to reconstruct continuity;
 - no geodesic loop, CPU upload, or map allocation per animation frame; and
 - approximately 3.4 MiB for a 512×288 three-attachment transfer map, plus 2 KiB for the critical-curve profile.
 
