@@ -166,9 +166,9 @@ async function start(): Promise<void> {
     if (cinematic) {
       modelReadoutLabel.textContent = "CINEMATIC REFERENCE · ART-DIRECTED";
       colorTemperatureValue.value = "4,500 K";
-      modelReadoutDetail.textContent = "DNGR-inspired · marginal optical depth";
+      modelReadoutDetail.textContent = "DNGR-inspired · mild warm grade · marginal depth";
       appearanceNote.textContent =
-        "4500 K artist-directed material; geodesic lensing remains physical.";
+        "4500 K source with a mild warm film grade; geodesic lensing remains physical.";
       heroEyebrow.textContent = "DNGR-INSPIRED CINEMATIC DISK";
       heroDetail.textContent =
         "Schwarzschild geodesics lens a warm, marginally opaque 4500\u00a0K presentation disk.";

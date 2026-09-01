@@ -79,7 +79,7 @@ See [docs/performance.md](docs/performance.md) for budgets and measurement rules
 V1 is a physically grounded renderer of a specific model, not a prediction of one named astronomical object. Its two appearance modes are intentionally labelled because they answer different questions.
 
 - **Scientific · NT** uses the Page–Thorne temperature profile, color hardening, relativistic frequency shift, and an optically thick photosphere.
-- **Cinematic · DNGR** keeps the same Schwarzschild geodesics but uses an art-directed 4500 K, marginal-optical-depth surface, an 85° default view, stronger procedural structure, and no frequency shift by default. It is inspired by the documented production choices for *Interstellar* and is not presented as an accretion-flow prediction.
+- **Cinematic · DNGR** keeps the same Schwarzschild geodesics but uses an art-directed 4500 K, marginal-optical-depth surface, an 85° default view, stronger procedural structure, a mild luminance-neutral warm film grade, and no frequency shift by default. It is inspired by the documented production choices for *Interstellar* and is not presented as an accretion-flow prediction.
 
 - Light propagation follows Schwarzschild null geodesics up to lookup-table interpolation error.
 - The disk is geometrically thin but optically thick and begins at the Schwarzschild ISCO.

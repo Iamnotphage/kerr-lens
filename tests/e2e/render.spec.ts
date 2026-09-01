@@ -19,6 +19,7 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   await expect(page.locator("#toggle-panel")).toHaveAttribute("aria-expanded", "true");
   await expect(page.locator("#disk-appearance")).toHaveValue("cinematic");
   await expect(page.locator("#color-temperature-value")).toHaveText("4,500 K");
+  await expect(page.locator("#model-readout-detail")).toContainText("mild warm grade");
   await expect(page.locator("#mass")).toBeDisabled();
   await expect(page.locator("#doppler-enabled")).not.toBeChecked();
   await page.locator("#disk-appearance").selectOption("scientific");

@@ -20,7 +20,7 @@ The render path is deliberately bounded:
 
 The 2048×1024 Milky Way panorama adds 284 KiB to the transfer and approximately 10.7 MiB of GPU memory including mip levels. It replaces the previous CPU-generated sky without adding a render pass or per-frame upload.
 
-V1.2 computes the relativistic temperature curve once on the CPU and uploads a 256×1 `R32F` texture (1 KiB). This replaces per-fragment logarithms and fourth roots with one coherent lookup. V1.2.1 keeps the turbulence field at two samples in both appearance modes. Its cinematic optical-depth transfer is the rational form `τ / (1 + τ)`, avoiding an exponential, particle loop, and post-processing pass.
+V1.2 computes the relativistic temperature curve once on the CPU and uploads a 256×1 `R32F` texture (1 KiB). This replaces per-fragment logarithms and fourth roots with one coherent lookup. V1.2.1 keeps the turbulence field at two samples in both appearance modes. Its cinematic optical-depth transfer is the rational form `τ / (1 + τ)`, avoiding an exponential, particle loop, and post-processing pass. The warm film grade is three constant channel multiplies and adds no texture lookup or render pass.
 
 ## Adaptive resolution
 
