@@ -85,7 +85,9 @@ median/p95 rule above when judging the added sampling cost.
 V2.1 does not run a Kerr integrator for every display pixel on every frame. Non-zero
 spin uses a three-attachment `RGBA16F` transfer target whose long edge is 512 pixels on
 a physical GPU and 224 pixels on a detected software renderer. It stores the escaped sky
-direction and the first two ordered equatorial-disk intersections. A 512-sample `R32F`
+direction and the Cartesian positions of the first two ordered equatorial-disk
+intersections. Cartesian hit coordinates remain continuous where a wrapped azimuth would
+jump by `2π` and create a visible interpolation seam. A 512-sample `R32F`
 polar profile independently evaluates the finite-observer Kerr critical curve so its edge
 is not limited by the lower-resolution transfer target.
 

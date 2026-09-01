@@ -11,8 +11,6 @@ uniform float uSpin;
 uniform float uObserverRadiusRs;
 uniform float uObserverInclination;
 
-const float PI = 3.14159265358979323846;
-const float TAU = 6.28318530717958647692;
 const float INNER_DISK_RADIUS_RS = 3.0;
 const float OUTER_DISK_RADIUS_RS = 12.0;
 const int MAX_STEPS = 224;
@@ -65,8 +63,8 @@ vec4 rayDerivative(
 vec4 encodedDiskHit(float radiusM, float phi, float coordinateTime) {
   float radiusRs = radiusM * 0.5;
   return vec4(
-    radiusRs,
-    mod(phi + PI, TAU) - PI,
+    radiusRs * cos(phi),
+    radiusRs * sin(phi),
     min(max(-coordinateTime * 0.5, 0.0), 65000.0),
     1.0
   );

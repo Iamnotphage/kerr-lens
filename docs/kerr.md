@@ -162,7 +162,9 @@ Using `mu` removes a sine/cosine pair from every step and gives the polynomial
 \]
 
 Radial and polar signs reverse only at their respective potential turning points.
-The first two valid crossings of `mu = 0` become ordered thin-disk intersections;
+The first two valid crossings of `mu = 0` become ordered thin-disk intersections,
+stored as Cartesian disk-plane coordinates to avoid interpolating across an azimuth
+branch cut;
 an escaped ray stores its asymptotic sky direction. A fixed 224-step midpoint
 integrator runs only when the transfer map is invalidated, not in steady-state
 animation frames.
