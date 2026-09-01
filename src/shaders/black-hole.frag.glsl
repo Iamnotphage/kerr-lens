@@ -486,41 +486,8 @@ vec2 rotateDiskPosition(vec2 position, float azimuth) {
   );
 }
 
-vec4 sampleTransferAcrossX(sampler2D transferMap, vec2 uv, vec2 texelSize) {
-  float halfBand = 2.75 * texelSize.x;
-  float axisDistance = uv.x - 0.5;
-  if (abs(axisDistance) >= halfBand) return texture(transferMap, uv);
-  vec4 negativeSide = texture(transferMap, vec2(0.5 - halfBand, uv.y));
-  vec4 positiveSide = texture(transferMap, vec2(0.5 + halfBand, uv.y));
-  float blend = smoothstep(-halfBand, halfBand, axisDistance);
-  return mix(negativeSide, positiveSide, blend);
-}
-
-/**
- * Anisotropically reconstruct only the undersampled BL chart footprint. The
- * wider polar band is needed near a face-on camera, where a single map row
- * spans many disk azimuths; it contracts to nearly one texel by 32 degrees.
- */
 vec4 sampleKerrTransfer(sampler2D transferMap, vec2 uv) {
-  vec2 texelSize = 1.0 / vec2(textureSize(transferMap, 0));
-  float faceOnWeight = 1.0 - smoothstep(0.15, 0.55, uCameraCoordinates.z);
-  float halfBand = mix(1.35, 3.5, faceOnWeight) * texelSize.y;
-  float axisDistance = uv.y - 0.5;
-  if (abs(axisDistance) >= halfBand) {
-    return sampleTransferAcrossX(transferMap, uv, texelSize);
-  }
-  vec4 negativeSide = sampleTransferAcrossX(
-    transferMap,
-    vec2(uv.x, 0.5 - halfBand),
-    texelSize
-  );
-  vec4 positiveSide = sampleTransferAcrossX(
-    transferMap,
-    vec2(uv.x, 0.5 + halfBand),
-    texelSize
-  );
-  float blend = smoothstep(-halfBand, halfBand, axisDistance);
-  return mix(negativeSide, positiveSide, blend);
+  return texture(transferMap, uv);
 }
 
 float kerrScreenLambda(vec2 screen) {

@@ -13,10 +13,6 @@ uniform float uObserverInclination;
 
 const float DISK_TRANSFER_MIN_RS = 2.25;
 const float DISK_TRANSFER_MAX_RS = 14.0;
-// Only the measure-zero lambda = 0 family can reach the Boyer-Lindquist spin
-// axis.  Keep the chart transition inside a sub-texel polar cap; ordinary rays
-// reflect at their exact Carter turning root instead of an arbitrary latitude.
-const float POLAR_CHART_CAP = 0.99995;
 const int MAX_STEPS = 224;
 
 float polarTurningCosineSquared(float lambda, float eta) {
@@ -31,13 +27,6 @@ float polarTurningCosineSquared(float lambda, float eta) {
     );
   }
   return clamp(eta / max(eta + lambda * lambda, 1e-6), 0.0, 1.0);
-}
-
-float polarChartAzimuthJump(float lambda, float turningCosineSquared) {
-  float turningSine = sqrt(max(1.0 - clamp(turningCosineSquared, 0.0, 1.0), 0.0));
-  float capSine = sqrt(1.0 - POLAR_CHART_CAP * POLAR_CHART_CAP);
-  float halfJump = acos(clamp(turningSine / capSine, 0.0, 1.0));
-  return (lambda >= 0.0 ? -2.0 : 2.0) * halfJump;
 }
 
 float radialPotential(float radius, float lambda, float eta) {
@@ -55,15 +44,17 @@ float polarPotential(float cosineTheta, float lambda, float eta) {
 }
 
 void minoDerivative(
-  vec4 position,
+  float radius,
+  vec3 angularDirection,
   vec2 velocity,
   float lambda,
   float eta,
-  out vec4 coordinateDerivative,
+  out float radiusDerivative,
+  out vec3 angularDerivative,
+  out float timeDerivative,
   out vec2 velocityDerivative
 ) {
-  float radius = position.x;
-  float cosineTheta = position.y;
+  float cosineTheta = angularDirection.z;
   float radiusSquared = radius * radius;
   float spinSquared = uSpin * uSpin;
   float cosineSquared = cosineTheta * cosineTheta;
@@ -71,7 +62,7 @@ void minoDerivative(
   float p = radiusSquared + spinSquared - uSpin * lambda;
   float shiftedMomentum = lambda - uSpin;
   float radialConstant = shiftedMomentum * shiftedMomentum + eta;
-  float sineSquared = max(1.0 - cosineSquared, 1e-7);
+  float sineSquared = max(dot(angularDirection.xy, angularDirection.xy), 1e-10);
   float phiMino = lambda / sineSquared - uSpin + uSpin * p / delta;
   float timeMino = uSpin * (lambda - uSpin * sineSquared) +
     (radiusSquared + spinSquared) * p / delta;
@@ -79,12 +70,15 @@ void minoDerivative(
   // The constants describe the future photon arriving at the observer. The
   // radial and polar velocities already point backward; phi and t therefore
   // carry the explicit parameter-reversal signs.
-  coordinateDerivative = vec4(
-    velocity.x,
-    velocity.y,
-    -phiMino,
-    -timeMino
+  float backwardPhiMino = -phiMino;
+  float planarScale = -cosineTheta * velocity.y / sineSquared;
+  radiusDerivative = velocity.x;
+  angularDerivative = vec3(
+    planarScale * angularDirection.x - backwardPhiMino * angularDirection.y,
+    planarScale * angularDirection.y + backwardPhiMino * angularDirection.x,
+    velocity.y
   );
+  timeDerivative = -timeMino;
   // Differentiating (dr/dgamma)^2 = R and (dmu/dgamma)^2 = M
   // gives continuous equations through both Carter turning points.
   velocityDerivative = vec2(
@@ -94,11 +88,10 @@ void minoDerivative(
   );
 }
 
-vec4 encodedDiskHit(float radiusM, float phi, float coordinateTime) {
+vec4 encodedDiskHit(float radiusM, vec2 direction, float coordinateTime) {
   float radiusRs = radiusM * 0.5;
   return vec4(
-    radiusRs * cos(phi),
-    radiusRs * sin(phi),
+    radiusRs * direction,
     min(max(-coordinateTime * 0.5, 0.0), 65000.0),
     1.0
   );
@@ -137,7 +130,8 @@ void main() {
     cosineTheta * cosineTheta *
       (lambda * lambda / max(sineTheta * sineTheta, 1e-6) - spinSquared);
 
-  vec4 position = vec4(radius, cosineTheta, 0.0, 0.0);
+  vec3 angularDirection = vec3(sineTheta, 0.0, cosineTheta);
+  float coordinateTime = 0.0;
   vec2 velocity = vec2(
     -sqrt(max(radialPotential(radius, lambda, eta), 0.0)),
     (backwardDirection.y >= 0.0 ? 1.0 : -1.0) *
@@ -147,78 +141,113 @@ void main() {
   float escapeRadius = max(initialRadius + 20.0, 72.0);
   float turningCosineSquared = polarTurningCosineSquared(lambda, eta);
   float polarTurningCosine = sqrt(turningCosineSquared);
-  float polarLimit = min(polarTurningCosine, POLAR_CHART_CAP);
-  bool usesPolarChartCap = polarTurningCosine > POLAR_CHART_CAP;
   int hitCount = 0;
 
   for (int stepIndex = 0; stepIndex < MAX_STEPS; stepIndex += 1) {
-    if (position.x <= outerHorizon + 0.025) {
+    if (radius <= outerHorizon + 0.025) {
       break;
     }
-    if (velocity.x > 0.0 && position.x >= escapeRadius) {
+    if (velocity.x > 0.0 && radius >= escapeRadius) {
       break;
     }
 
     float targetCoordinateStep = mix(
       0.075,
       1.65,
-      smoothstep(outerHorizon + 0.3, 28.0, position.x)
+      smoothstep(outerHorizon + 0.3, 28.0, radius)
     );
-    vec4 coordinateDerivative;
+    float radiusDerivative;
+    vec3 angularDerivative;
+    float timeDerivative;
     vec2 velocityDerivative;
     minoDerivative(
-      position,
+      radius,
+      angularDirection,
       velocity,
       lambda,
       eta,
-      coordinateDerivative,
+      radiusDerivative,
+      angularDerivative,
+      timeDerivative,
       velocityDerivative
     );
     float minoStep = targetCoordinateStep / max(abs(velocity.x), 0.5);
     minoStep = min(minoStep, 0.025 / max(abs(velocity.y), 0.25));
-    minoStep = min(minoStep, 0.14 / max(abs(coordinateDerivative.z), 0.5));
+    minoStep = min(minoStep, 0.08 / max(length(angularDerivative), 0.5));
     minoStep = clamp(minoStep, 1e-5, 0.05);
 
-    vec4 midpointPosition = position + coordinateDerivative * (0.5 * minoStep);
+    float midpointRadius = radius + radiusDerivative * (0.5 * minoStep);
+    vec3 midpointAngularDirection = normalize(
+      angularDirection + angularDerivative * (0.5 * minoStep)
+    );
     vec2 midpointVelocity = velocity + velocityDerivative * (0.5 * minoStep);
-    vec4 midpointCoordinateDerivative;
+    float midpointRadiusDerivative;
+    vec3 midpointAngularDerivative;
+    float midpointTimeDerivative;
     vec2 midpointVelocityDerivative;
     minoDerivative(
-      midpointPosition,
+      midpointRadius,
+      midpointAngularDirection,
       midpointVelocity,
       lambda,
       eta,
-      midpointCoordinateDerivative,
+      midpointRadiusDerivative,
+      midpointAngularDerivative,
+      midpointTimeDerivative,
       midpointVelocityDerivative
     );
-    vec4 next = position + midpointCoordinateDerivative * minoStep;
+    float nextRadius = radius + midpointRadiusDerivative * minoStep;
+    vec3 nextAngularDirection = normalize(
+      angularDirection + midpointAngularDerivative * minoStep
+    );
+    float nextCoordinateTime = coordinateTime + midpointTimeDerivative * minoStep;
     vec2 nextVelocity = velocity + midpointVelocityDerivative * minoStep;
 
-    // Keep midpoint truncation inside the exact Carter interval. Only rays
-    // whose physical root lies inside the tiny axis cap need a BL chart
-    // transition and the corresponding skipped azimuth. This removes the
-    // former arbitrary-latitude boundary that appeared as a screen-space cut.
-    if (abs(next.y) > polarLimit) {
-      float pole = next.y >= 0.0 ? 1.0 : -1.0;
-      next.y = pole * (2.0 * polarLimit - abs(next.y));
-      nextVelocity.y = -pole * abs(nextVelocity.y);
-      if (usesPolarChartCap) {
-        next.z += polarChartAzimuthJump(lambda, turningCosineSquared);
+    // Midpoint truncation can overshoot a Carter root by a small amount. Fold
+    // mu back into its exact interval while preserving the regular Cartesian
+    // angular phase; unlike BL phi, this representation is finite at the axis.
+    if (abs(nextAngularDirection.z) > polarTurningCosine) {
+      float pole = nextAngularDirection.z >= 0.0 ? 1.0 : -1.0;
+      float reflectedCosine = pole * (
+        2.0 * polarTurningCosine - abs(nextAngularDirection.z)
+      );
+      reflectedCosine = clamp(reflectedCosine, -1.0, 1.0);
+      float reflectedSine = sqrt(max(1.0 - reflectedCosine * reflectedCosine, 0.0));
+      vec2 planarDirection = nextAngularDirection.xy;
+      float planarLength = length(planarDirection);
+      if (planarLength > 1e-8) {
+        planarDirection *= reflectedSine / planarLength;
+      } else {
+        planarDirection = reflectedSine * normalize(angularDirection.xy + vec2(1e-8, 0.0));
       }
+      nextAngularDirection = vec3(planarDirection, reflectedCosine);
+      nextVelocity.y = -pole * abs(nextVelocity.y);
     }
 
-    if (position.y * next.y <= 0.0 && position.y != next.y) {
-      float crossing = clamp(position.y / (position.y - next.y), 0.0, 1.0);
-      float hitRadiusM = mix(position.x, next.x, crossing);
+    if (
+      angularDirection.z * nextAngularDirection.z <= 0.0 &&
+      angularDirection.z != nextAngularDirection.z
+    ) {
+      float crossing = clamp(
+        angularDirection.z / (angularDirection.z - nextAngularDirection.z),
+        0.0,
+        1.0
+      );
+      float hitRadiusM = mix(radius, nextRadius, crossing);
       float hitRadiusRs = hitRadiusM * 0.5;
       if (
         hitRadiusRs >= DISK_TRANSFER_MIN_RS &&
         hitRadiusRs <= DISK_TRANSFER_MAX_RS
       ) {
+        vec2 hitDirection = normalize(mix(
+          angularDirection.xy,
+          nextAngularDirection.xy,
+          crossing
+        ));
         vec4 hit = encodedDiskHit(
           hitRadiusM,
-          mix(position.z, next.z, crossing),
-          mix(position.w, next.w, crossing)
+          hitDirection,
+          mix(coordinateTime, nextCoordinateTime, crossing)
         );
         if (hitCount == 0) diskHit0 = hit;
         else if (hitCount == 1) diskHit1 = hit;
@@ -226,8 +255,10 @@ void main() {
       }
     }
 
-    next.w = max(next.w, -130000.0);
-    position = next;
+    nextCoordinateTime = max(nextCoordinateTime, -130000.0);
+    radius = nextRadius;
+    angularDirection = nextAngularDirection;
+    coordinateTime = nextCoordinateTime;
     velocity = nextVelocity;
   }
 
@@ -235,11 +266,5 @@ void main() {
   // at display resolution. Always provide a finite direction so a ray that
   // has not reached the distant escape sphere within the fixed step budget
   // cannot create a false black halo outside that exact boundary.
-  float sine = sqrt(max(1.0 - position.y * position.y, 0.0));
-  skyTransfer = vec4(
-    sine * cos(position.z),
-    sine * sin(position.z),
-    position.y,
-    1.0
-  );
+  skyTransfer = vec4(normalize(angularDirection), 1.0);
 }

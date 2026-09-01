@@ -30,6 +30,11 @@ const FOV_Y = (48 * Math.PI) / 180;
 const SHADOW_PROFILE_SIZE = 512;
 const UPDATE_SETTLE_MS = 55;
 
+function evenDimension(value: number): number {
+  const rounded = Math.max(96, Math.round(value));
+  return rounded + (rounded & 1);
+}
+
 export interface KerrLensingMapState {
   readonly ready: boolean;
   readonly spin: number;
@@ -141,8 +146,10 @@ export class KerrLensingMap {
 
   resize(viewportWidth: number, viewportHeight: number): boolean {
     const aspect = Math.max(viewportWidth, 1) / Math.max(viewportHeight, 1);
-    const width = aspect >= 1 ? this.longEdge : Math.max(96, Math.round(this.longEdge * aspect));
-    const height = aspect >= 1 ? Math.max(96, Math.round(this.longEdge / aspect)) : this.longEdge;
+    // Even dimensions keep the measure-zero lambda = 0 / screen-axis ray
+    // between texel centers on every viewport orientation.
+    const width = aspect >= 1 ? this.longEdge : evenDimension(this.longEdge * aspect);
+    const height = aspect >= 1 ? evenDimension(this.longEdge / aspect) : this.longEdge;
     if (width === this.target.width && height === this.target.height) return false;
     this.target.setSize(width, height);
     this.resolution.set(width, height);

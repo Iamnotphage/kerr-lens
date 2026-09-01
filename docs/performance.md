@@ -91,11 +91,11 @@ jump by `2π` and create a visible interpolation seam. A 512-sample `R32F`
 polar profile independently evaluates the finite-observer Kerr critical curve so its edge
 is not limited by the lower-resolution transfer target.
 
-At the Boyer–Lindquist polar coordinate singularity, the map evaluates the near-axis
-azimuth jump from the polar turning root instead of spending many uniform steps on the
-integrable `lambda/sin²(theta)` spike. The jump approaches an opposite-meridian transition
-for zero axial angular momentum. This removes a false center seam while keeping the fixed
-rebuild budget bounded.
+The map does not integrate singular Boyer–Lindquist azimuth directly. It evolves the
+Cartesian angular direction, whose derivative stays finite at the spin axis, and folds
+midpoint overshoot at the exact Carter polar root. Even transfer dimensions keep the
+measure-zero axial ray between texel centers. This removes chart seams without adding
+display-time filtering or an unbounded near-axis step count.
 
 Equatorial crossings are retained through a `2.25–14 r_s` guard band around the visible
 `3–12 r_s` annulus. The full-resolution display shader evaluates the actual disk edge from
@@ -108,8 +108,7 @@ renderer waits 55 ms for a stream of input events to settle, performs one offscr
 draw with a fixed 224-step Carter integrator, then returns to the steady-state contract:
 
 - one display draw call and one full-screen triangle;
-- three base transfer samples plus one one-dimensional shadow sample; only two
-  approximately one-texel-wide chart-axis strips use extra taps to reconstruct continuity;
+- three transfer samples plus one one-dimensional shadow sample at every pixel;
 - no geodesic loop, CPU upload, or map allocation per animation frame; and
 - approximately 3.4 MiB for a 512×288 three-attachment transfer map, plus 2 KiB for the critical-curve profile.
 

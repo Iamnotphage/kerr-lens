@@ -173,10 +173,11 @@ The velocities therefore pass smoothly through zero at Carter turning points; no
 pixel-dependent sign flip is needed.
 The exact positive root of the polar polynomial bounds every ray's `mu` coordinate.
 The integrator reflects midpoint truncation at that Carter root, rather than at an
-arbitrary latitude. Only the measure-zero family approaching the spin axis enters a
-sub-texel Boyer–Lindquist chart cap, where the skipped near-axis azimuth tends to
-`phi -> phi ± pi` as `lambda -> 0`. This is a coordinate regularization, not a
-physical kick to the ray.
+arbitrary latitude. Boyer–Lindquist `phi` is not evolved directly: the shader carries
+the regular Cartesian angular direction
+`(sin(theta) cos(phi), sin(theta) sin(phi), cos(theta))`. Its differential remains
+finite as the ray approaches the spin axis, removing the coordinate jump without a
+screen-space correction.
 The first two valid crossings of `mu = 0` become ordered thin-disk intersections,
 stored as Cartesian disk-plane coordinates to avoid interpolating across an azimuth
 branch cut. The transfer map retains a radial guard band beyond the visible annulus,
@@ -190,12 +191,10 @@ The transfer map therefore always supplies its last finite sky direction: rays t
 linger near the photon region beyond the fixed step budget cannot turn into a false
 black halo outside the exact curve.
 
-Ordinary rays now turn at their physical Carter roots. The only remaining singular
-footprint is the sub-pixel spin-axis family, which a finite transfer map can undersample.
-The display shader therefore reconstructs only narrow horizontal and vertical chart
-footprints from samples on both sides. The polar footprint expands mildly for a nearly
-face-on camera and contracts above 32 degrees; all other pixels retain one sample per
-transfer attachment, and thin-disk caustics keep their native map resolution.
+The transfer map stores this Cartesian sky direction and Cartesian disk-plane hits, so
+the display shader samples every attachment exactly once. No screen axis is blurred or
+reconstructed; thin-disk caustics retain their native map resolution and the steady
+renderer remains one draw call over one full-screen triangle.
 
 ## Exact critical curve
 
