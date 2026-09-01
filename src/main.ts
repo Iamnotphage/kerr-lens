@@ -171,7 +171,7 @@ async function start(): Promise<void> {
         "4500 K artist-directed material; geodesic lensing remains physical.";
       heroEyebrow.textContent = "DNGR-INSPIRED CINEMATIC DISK";
       heroDetail.textContent =
-        "Schwarzschild geodesics lens a warm, marginally opaque 4500 K presentation disk.";
+        "Schwarzschild geodesics lens a warm, marginally opaque 4500\u00a0K presentation disk.";
     } else {
       modelReadoutLabel.textContent = "DERIVED COLOR PEAK · fcol 1.7";
       colorTemperatureValue.value = formatTemperature(activeDisk.peakColorTemperatureK);
