@@ -138,17 +138,13 @@ void main() {
   );
   float outerHorizon = 1.0 + sqrt(max(1.0 - spinSquared, 0.0));
   float escapeRadius = max(initialRadius + 20.0, 72.0);
-  bool escaped = false;
-  bool captured = false;
   int hitCount = 0;
 
   for (int stepIndex = 0; stepIndex < MAX_STEPS; stepIndex += 1) {
     if (position.x <= outerHorizon + 0.025) {
-      captured = true;
       break;
     }
     if (velocity.x > 0.0 && position.x >= escapeRadius) {
-      escaped = true;
       break;
     }
 
@@ -221,16 +217,15 @@ void main() {
     velocity = nextVelocity;
   }
 
-  if (!escaped && !captured && velocity.x > 0.0 && position.x > 8.0) {
-    escaped = true;
-  }
-  if (escaped) {
-    float sine = sqrt(max(1.0 - position.y * position.y, 0.0));
-    skyTransfer = vec4(
-      sine * cos(position.z),
-      sine * sin(position.z),
-      position.y,
-      1.0
-    );
-  }
+  // The independently projected critical curve is authoritative for capture
+  // at display resolution. Always provide a finite direction so a ray that
+  // has not reached the distant escape sphere within the fixed step budget
+  // cannot create a false black halo outside that exact boundary.
+  float sine = sqrt(max(1.0 - position.y * position.y, 0.0));
+  skyTransfer = vec4(
+    sine * cos(position.z),
+    sine * sin(position.z),
+    position.y,
+    1.0
+  );
 }

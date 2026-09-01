@@ -184,6 +184,11 @@ an escaped ray stores its asymptotic sky direction. A fixed 224-step midpoint
 integrator runs only when the transfer map is invalidated, not in steady-state
 animation frames.
 
+The independently projected critical curve is authoritative for the capture mask.
+The transfer map therefore always supplies its last finite sky direction: rays that
+linger near the photon region beyond the fixed step budget cannot turn into a false
+black halo outside the exact curve.
+
 ## Exact critical curve
 
 For an unstable spherical photon orbit at `r` in `M` units, V2.1 independently
