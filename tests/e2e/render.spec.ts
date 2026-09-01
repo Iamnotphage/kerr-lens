@@ -28,6 +28,23 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   await page.locator("#toggle-panel").click();
   await expect(page.locator("#toggle-panel")).toHaveAttribute("aria-expanded", "true");
   await expect(page.locator("#disk-appearance")).toHaveValue("cinematic");
+  await expect(page.locator("#spin-value")).toHaveText("0.000");
+  await expect(page.locator("#spacetime-status-title")).toHaveText("EXACT SCHWARZSCHILD LIMIT");
+  await expect(page.locator("#kerr-horizon-value")).toHaveText("1.000 rₛ");
+  await expect(page.locator("#kerr-photon-value")).toHaveText("1.500 rₛ");
+  await expect(page.locator("#kerr-isco-value")).toHaveText("3.000 rₛ");
+  await page.locator("#spin").fill("0.9");
+  await expect(page.locator("#spin-value")).toHaveText("+0.900");
+  await expect(page.locator("#spacetime-status-title")).toHaveText("PROGRADE KERR PARAMETERS");
+  await expect(page.locator("#kerr-horizon-value")).toHaveText("0.718 rₛ");
+  await expect(page.locator("#kerr-isco-value")).toHaveText("1.160 rₛ");
+  await expect(page.locator("#kerr-efficiency-value")).toHaveText("15.575%");
+  await page.locator("#spin").fill("-0.9");
+  await expect(page.locator("#spin-value")).toHaveText("-0.900");
+  await expect(page.locator("#spacetime-status-title")).toHaveText("RETROGRADE KERR PARAMETERS");
+  await expect(page.locator("#kerr-isco-value")).toHaveText("4.359 rₛ");
+  await page.locator("#spin").fill("0");
+  await expect(page.locator("#spacetime-status-title")).toHaveText("EXACT SCHWARZSCHILD LIMIT");
   await expect(page.locator("#color-temperature-value")).toHaveText("4,500 K");
   await expect(page.locator("#model-readout-detail")).toContainText("mild warm grade");
   await expect(page.locator("#mass")).toBeDisabled();
@@ -65,7 +82,7 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   expect(canvasBounds?.height).toBeGreaterThan(400);
   expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
 
-  await page.screenshot({ path: testInfo.outputPath("kerr-lens-v1.3.png"), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath("kerr-lens-v2.0.png"), fullPage: true });
 
   // A near face-on view exposes any angular wrap discontinuity as a radial
   // wedge, so preserve it as explicit visual evidence in the CI artifact.
@@ -76,7 +93,7 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   await page.screenshot({ path: testInfo.outputPath("disk-seam-probe.png"), fullPage: true });
 });
 
-test("captures the V1.3 appearance and inclination validation matrix", async ({
+test("captures the appearance and inclination validation matrix", async ({
   page,
 }, testInfo) => {
   test.setTimeout(90_000);
@@ -137,9 +154,9 @@ test("exports a fixed-scene frame-time distribution", async ({ page }, testInfo)
   expect(result.gpu.renderer.length).toBeGreaterThan(0);
   expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
 
-  await testInfo.attach("benchmark-v1.3.json", {
+  await testInfo.attach("benchmark-v2.0.json", {
     body: JSON.stringify(report, null, 2),
     contentType: "application/json",
   });
-  await page.screenshot({ path: testInfo.outputPath("benchmark-v1.3.png"), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath("benchmark-v2.0.png"), fullPage: true });
 });

@@ -2,7 +2,7 @@
 
 ## Units and spacetime
 
-V1 uses geometrized units with the Schwarzschild radius
+The V2.0 image renderer uses geometrized units with the Schwarzschild radius
 
 \[
 r_s = \frac{2GM}{c^2} = 1.
@@ -33,6 +33,23 @@ which corresponds to the unstable photon sphere at `r = 3/2` and the critical sh
 \[
 b_c = \frac{1}{\sqrt{\mu}} = \frac{3\sqrt{3}}{2}r_s.
 \]
+
+## V2.0 Kerr parameter layer
+
+V2.0 adds a signed dimensionless spin model `a*` on the CPU. It computes the
+Boyer–Lindquist horizons and stationary limit, disk-plane photon orbit, signed-branch
+ISCO, circular-orbit energy and angular velocity, horizon angular velocity, and
+zero-torque radiative efficiency. The allowed interactive interval is
+`-0.998 <= a* <= 0.998`.
+
+At `a* = 0`, the Kerr implementation returns the existing Schwarzschild horizon,
+photon-sphere, ISCO, and efficiency constants exactly. Positive spin is aligned with
+the disk's positive orbit; negative spin opposes it. The complete equations and sign
+convention are documented in [kerr.md](kerr.md).
+
+This parameter layer is not consumed by the V2.0 fragment shader. Light propagation
+below therefore remains Schwarzschild until V2.1, and the surface-emission model
+remains the zero-spin Page–Thorne disk until V2.2.
 
 ## Constant-time beam tracing
 
@@ -173,6 +190,11 @@ Automated tests pin the following independent analytic facts:
   expansion; and
 - seven scattering rays from `b = 2.7–100 r_s` agree with the precomputed deflection
   texture to within `3×10^-5 rad` at the apsis.
+- Kerr `a* = 0` exactly matches every shared Schwarzschild anchor;
+- horizons are even in signed spin while disk-aligned photon and ISCO branches are not;
+  and
+- `a* = ±0.998` orbit, efficiency, and angular-velocity values match the analytic Kerr
+  expressions.
 
 CI additionally captures both disk materials at `8°`, `45°`, and `85°` inclination,
 including a near-face-on seam probe. The matrix is evidence for human image review;
@@ -185,3 +207,6 @@ the CPU oracle is the numerical correctness gate. See [validation.md](validation
 3. Scott Noble et al., [*Radiative Efficiency and Thermal Spectrum of Accretion onto Schwarzschild Black Holes*](https://arxiv.org/abs/1105.2825), 2011.
 4. Oliver James et al., [*Gravitational Lensing by Spinning Black Holes in Astrophysics, and in the Movie Interstellar*](https://arxiv.org/abs/1502.03808), 2015.
 5. Nicolas Aimar et al., [*GYOTO 2.0: a polarized relativistic ray-tracing code*](https://arxiv.org/abs/2311.18802), 2023.
+6. Roy Kerr, [*Gravitational Field of a Spinning Mass as an Example of Algebraically Special Metrics*](https://doi.org/10.1103/PhysRevLett.11.237), 1963.
+7. James Bardeen, William Press, and Saul Teukolsky, [*Rotating Black Holes: Locally Nonrotating Frames, Energy Extraction, and Scalar Synchrotron Radiation*](https://ui.adsabs.harvard.edu/abs/1972ApJ...178..347B/abstract), 1972.
+8. Kip Thorne, [*Disk-Accretion onto a Black Hole. II. Evolution of the Hole*](https://doi.org/10.1086/152991), 1974.

@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta
       name="description"
-      content="A performance-first, numerically validated Schwarzschild black hole renderer for the web."
+      content="A performance-first Kerr black-hole framework with validated Schwarzschild lensing for the web."
     />
     <meta name="theme-color" content="#03050a" />
-    <title>Kerr Lens — Schwarzschild V1.3</title>
+    <title>Kerr Lens — Kerr Framework V2.0</title>
   </head>
   <body>
     <main id="app">
-      <canvas id="scene" aria-label="Interactive Schwarzschild black hole visualization"></canvas>
+      <canvas id="scene" aria-label="Interactive Kerr parameter visualization with Schwarzschild ray tracing"></canvas>
 
       <div class="vignette" aria-hidden="true"></div>
 
@@ -21,7 +21,8 @@
           <span class="brand__dot" aria-hidden="true"></span>
           KERR LENS
         </a>
-        <span class="brand__version">SCHWARZSCHILD / V1.3</span>
+        <span class="brand__version">KERR FRAMEWORK / V2.0</span>
+        <span class="brand__spin" id="brand-spin">a* 0.000</span>
       </header>
 
       <section class="hero-copy" aria-label="Visualization summary">
@@ -35,8 +36,8 @@
       <aside class="panel panel--collapsed" id="control-panel" aria-label="Simulation controls">
         <div class="panel__header">
           <div>
-            <p class="eyebrow">VIEW &amp; MATERIAL</p>
-            <h2>Disk presentation</h2>
+            <p class="eyebrow">SPACETIME &amp; MATERIAL</p>
+            <h2>Kerr framework</h2>
           </div>
           <button class="icon-button" id="toggle-panel" type="button" aria-label="Expand controls" aria-expanded="false">
             <span></span><span></span>
@@ -44,6 +45,18 @@
         </div>
 
         <div class="panel__body" id="panel-body">
+          <div class="spacetime-status" id="spacetime-status" data-spin-sense="schwarzschild">
+            <span>KERR METRIC PARAMETERS</span>
+            <strong id="spacetime-status-title">EXACT SCHWARZSCHILD LIMIT</strong>
+            <small>V2.0 computes spin-dependent invariants. Image rays remain Schwarzschild until V2.1.</small>
+          </div>
+
+          <div class="control control--spin">
+            <div class="control__label"><label for="spin">Dimensionless spin a*</label><output id="spin-value">0.000</output></div>
+            <input id="spin" type="range" min="-0.998" max="0.998" step="0.001" value="0" />
+          </div>
+          <p class="spin-note" id="spin-note">Zero spin · Kerr and Schwarzschild parameter sets coincide exactly.</p>
+
           <div class="control control--select control--appearance">
             <label for="disk-appearance">Disk appearance</label>
             <select id="disk-appearance" aria-describedby="appearance-note">
@@ -104,12 +117,12 @@
           </div>
 
           <div class="science-card">
-            <div><span>EVENT HORIZON</span><strong>1.000 rₛ</strong></div>
-            <div><span>PHOTON SPHERE</span><strong>1.500 rₛ</strong></div>
-            <div><span>ISCO</span><strong>3.000 rₛ</strong></div>
-            <div><span>CRITICAL IMPACT</span><strong>2.598 rₛ</strong></div>
-            <div><span>FLUX PEAK</span><strong>4.775 rₛ</strong></div>
-            <div><span>NT EFFICIENCY</span><strong>5.719%</strong></div>
+            <div><span>OUTER HORIZON</span><strong id="kerr-horizon-value">1.000 rₛ</strong></div>
+            <div><span>EQ. ERGOSPHERE WIDTH</span><strong id="kerr-ergosphere-value">0.000 rₛ</strong></div>
+            <div><span>DISK PHOTON ORBIT</span><strong id="kerr-photon-value">1.500 rₛ</strong></div>
+            <div><span>DISK-ALIGNED ISCO</span><strong id="kerr-isco-value">3.000 rₛ</strong></div>
+            <div><span>NT EFFICIENCY</span><strong id="kerr-efficiency-value">5.719%</strong></div>
+            <div><span>HORIZON Ω<sub>H</sub>M</span><strong id="kerr-omega-value">0.0000</strong></div>
           </div>
 
           <button class="reset-button" id="reset-view" type="button">Reset observer</button>
@@ -133,7 +146,7 @@
       </div>
 
       <section class="benchmark-panel" id="benchmark-panel" data-state="idle" hidden>
-        <p class="eyebrow">V1.3 VALIDATION MODE</p>
+        <p class="eyebrow">V2.0 VALIDATION MODE</p>
         <h2>Fixed-scene frame benchmark</h2>
         <p id="benchmark-phase">Preparing shader and assets</p>
         <div class="benchmark-grid">
