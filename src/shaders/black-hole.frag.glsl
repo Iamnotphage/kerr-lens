@@ -242,20 +242,29 @@ float diskTemperatureProfile(float radius) {
   return texture(uDiskTemperatureTexture, vec2(profileU, 0.5)).r;
 }
 
-float diskBrightnessStructure(float radius, float angle, float coordinateTime) {
+float diskBrightnessStructure(vec2 position, float radius, float coordinateTime) {
   float omega = sqrt(0.5 / (radius * radius * radius));
-  float phase = angle - coordinateTime * omega;
 
-  // Keep the field continuous in the disk plane so the detail moves with the
-  // orbit instead of forming screen-space rings. Both appearance modes share
-  // these two samples; the cinematic mode simply maps them to a wider optical-
-  // depth range.
-  float spiralPhase = phase + 1.35 * log(radius / INNER_DISK_RADIUS);
-  vec2 flowPosition = radius * vec2(cos(spiralPhase), sin(spiralPhase));
+  // Rotate the normalized disk-plane position directly instead of recovering
+  // its angle with atan(). This is exactly continuous across the negative-x
+  // axis, where atan(y, x) changes branch from +PI to -PI.
+  float twist = -coordinateTime * omega + 1.35 * log(radius / INNER_DISK_RADIUS);
+  float cosTwist = cos(twist);
+  float sinTwist = sin(twist);
+  vec2 direction = position / radius;
+  vec2 flowDirection = vec2(
+    cosTwist * direction.x - sinTwist * direction.y,
+    sinTwist * direction.x + cosTwist * direction.y
+  );
+  vec2 flowPosition = radius * flowDirection;
   vec2 broadUv = flowPosition * 0.105;
   float broad = texture(uNoiseTexture, broadUv + vec2(0.37, 0.71)).r;
   float fine = texture(uNoiseTexture, broadUv * 3.65 + vec2(0.13, 0.47)).r;
-  float filament = 0.5 + 0.5 * sin(2.8 * spiralPhase + 4.2 * (broad - 0.5));
+
+  // sin(3a) = 3 sin(a) - 4 sin^3(a) gives a three-arm filament field
+  // without a non-periodic raw-angle multiplier or another trig evaluation.
+  float flowY = flowDirection.y;
+  float filament = 0.5 + 0.5 * flowY * (3.0 - 4.0 * flowY * flowY);
   return smoothstep(0.2, 0.82, 0.52 * broad + 0.34 * fine + 0.14 * filament);
 }
 
@@ -264,8 +273,7 @@ vec4 diskColor(vec2 position, float coordinateTime, float shiftFactor) {
   float radius = length(position);
   if (radius <= INNER_DISK_RADIUS || radius >= OUTER_DISK_RADIUS) return vec4(0.0);
 
-  float angle = atan(position.y, position.x);
-  float structure = diskBrightnessStructure(radius, angle, coordinateTime);
+  float structure = diskBrightnessStructure(position, radius, coordinateTime);
   float edge = smoothstep(INNER_DISK_RADIUS, INNER_DISK_RADIUS * 1.03, radius) *
     (1.0 - smoothstep(OUTER_DISK_RADIUS * 0.91, OUTER_DISK_RADIUS, radius));
   float shift = uDopplerEnabled == 1 ? clamp(shiftFactor, 0.18, 4.0) : 1.0;

@@ -55,4 +55,12 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
 
   await page.screenshot({ path: testInfo.outputPath("kerr-lens-v1.2.1.png"), fullPage: true });
+
+  // A near face-on view exposes any angular wrap discontinuity as a radial
+  // wedge, so preserve it as explicit visual evidence in the CI artifact.
+  await page.locator("#toggle-panel").click();
+  await page.locator("#inclination").fill("8");
+  await page.locator("#toggle-panel").click();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: testInfo.outputPath("disk-seam-probe.png"), fullPage: true });
 });
