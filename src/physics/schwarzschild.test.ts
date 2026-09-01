@@ -6,7 +6,6 @@ import {
   deflectionTextureU,
   deflectionTextureV,
   staticObserver,
-  thinDiskTemperatureRatio,
 } from "./schwarzschild";
 
 const dot = (a: readonly number[], b: readonly number[]) =>
@@ -15,12 +14,6 @@ const dot = (a: readonly number[], b: readonly number[]) =>
 describe("Schwarzschild analytic anchors", () => {
   it("uses the exact critical shadow radius", () => {
     expect(SCHWARZSCHILD.criticalImpactRs).toBeCloseTo(2.598076211, 9);
-  });
-
-  it("places the thin-disk temperature maximum at 49/12 r_s", () => {
-    expect(thinDiskTemperatureRatio(49 / 12)).toBeCloseTo(1, 10);
-    expect(thinDiskTemperatureRatio(SCHWARZSCHILD.iscoRs)).toBe(0);
-    expect(thinDiskTemperatureRatio(12)).toBeLessThan(1);
   });
 });
 

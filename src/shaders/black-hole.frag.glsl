@@ -50,14 +50,14 @@ uniform vec3 uCameraOutwardAxis;
 uniform sampler2D uDeflectionTexture;
 uniform sampler2D uInverseRadiusTexture;
 uniform sampler2D uBlackBodyTexture;
+uniform sampler2D uDiskTemperatureTexture;
 uniform sampler2D uNoiseTexture;
 uniform sampler2D uSkyTexture;
 
 uniform float uTime;
 uniform float uExposure;
-uniform float uDiskTemperature;
-uniform float uDiskDensity;
-uniform float uDiskOpacity;
+uniform float uDiskPeakTemperature;
+uniform float uSpectralDilution;
 uniform int uDiskEnabled;
 uniform int uDopplerEnabled;
 uniform int uSkyEnabled;
@@ -71,6 +71,8 @@ const int DEFLECTION_WIDTH = 512;
 const int DEFLECTION_HEIGHT = 512;
 const int INVERSE_RADIUS_WIDTH = 64;
 const int INVERSE_RADIUS_HEIGHT = 32;
+const int DISK_TEMPERATURE_WIDTH = 256;
+const float BLACK_BODY_TABLE_MAX_TEMPERATURE = 39408.3376;
 
 float unitTextureCoordinate(float value, int size) {
   return 0.5 / float(size) + value * (1.0 - 1.0 / float(size));
@@ -221,66 +223,54 @@ vec3 skyColor(vec3 direction) {
 }
 
 vec3 blackBodyRadiance(float temperature) {
-  float textureU = clamp(log(max(temperature, 100.0) / 100.0) / 6.0, 0.0, 1.0);
+  float clampedTemperature = clamp(temperature, 100.0, BLACK_BODY_TABLE_MAX_TEMPERATURE);
+  float textureU = clamp(log(clampedTemperature / 100.0) / 6.0, 0.0, 1.0);
+  float hotRatio = max(temperature / BLACK_BODY_TABLE_MAX_TEMPERATURE, 1.0);
+  // Continue the last measured lookup slope smoothly, tending to the linear
+  // Rayleigh–Jeans temperature dependence above the table's visible range.
+  float highTemperatureScale = 1.35 * hotRatio - 0.35;
   // Absolute detector exposure is unspecified; this scale places the physical
   // radiance ratios in a useful HDR range before the user exposure control.
-  return texture(uBlackBodyTexture, vec2(textureU, 0.5)).rgb * 3e-8;
+  return texture(uBlackBodyTexture, vec2(textureU, 0.5)).rgb * highTemperatureScale * 3e-8;
 }
 
 float diskTemperatureProfile(float radius) {
-  if (radius <= INNER_DISK_RADIUS) return 0.0;
-  const float peakRadius = 49.0 / 12.0;
-  float peak = (1.0 - sqrt(INNER_DISK_RADIUS / peakRadius)) /
-    (peakRadius * peakRadius * peakRadius);
-  float flux = (1.0 - sqrt(INNER_DISK_RADIUS / radius)) /
-    (radius * radius * radius);
-  return pow(max(flux / peak, 0.0), 0.25);
+  float profileU = (radius - INNER_DISK_RADIUS) /
+    (OUTER_DISK_RADIUS - INNER_DISK_RADIUS);
+  profileU = unitTextureCoordinate(clamp(profileU, 0.0, 1.0), DISK_TEMPERATURE_WIDTH);
+  return texture(uDiskTemperatureTexture, vec2(profileU, 0.5)).r;
 }
 
-float accretionDensity(float radius, float angle, float coordinateTime) {
+float diskBrightnessStructure(float radius, float angle, float coordinateTime) {
   float omega = sqrt(0.5 / (radius * radius * radius));
   float phase = angle - coordinateTime * omega;
 
-  // Advect a continuous Cartesian noise field instead of painting radial
-  // sine bands. The logarithmic twist seeds trailing structures while the
-  // Keplerian omega shears them at different rates across the disk.
-  float spiralPhase = phase + 1.35 * log(radius / INNER_DISK_RADIUS);
+  // A continuous disk-plane field prevents radial bands. Two samples add only
+  // low-contrast surface structure; they do not alter opacity or temperature.
+  float spiralPhase = phase + 1.2 * log(radius / INNER_DISK_RADIUS);
   vec2 flowPosition = radius * vec2(cos(spiralPhase), sin(spiralPhase));
-  vec2 broadUv = flowPosition * 0.115;
-
-  // Three cache-friendly samples give us domain-warped broad turbulence and
-  // thin ridges. There is no particle loop and no extra render pass.
-  float warp = texture(uNoiseTexture, broadUv * 0.61 + vec2(0.37, 0.71)).r * 2.0 - 1.0;
-  float broad = texture(uNoiseTexture, broadUv + warp * vec2(0.24, -0.19)).r;
-  float fine = texture(
-    uNoiseTexture,
-    broadUv * 3.7 + warp * vec2(-0.53, 0.41) + vec2(0.13, 0.47)
-  ).r;
-
-  float ridge = 1.0 - abs(fine * 2.0 - 1.0);
-  ridge = ridge * ridge * ridge;
-  float cloud = smoothstep(0.16, 0.9, broad);
-  return clamp(0.12 + 0.78 * cloud + 0.38 * ridge * cloud, 0.0, 1.18);
+  vec2 broadUv = flowPosition * 0.12;
+  float broad = texture(uNoiseTexture, broadUv + vec2(0.37, 0.71)).r;
+  float fine = texture(uNoiseTexture, broadUv * 3.4 + vec2(0.13, 0.47)).r;
+  return smoothstep(0.12, 0.9, mix(broad, fine, 0.32));
 }
 
-vec4 diskColor(vec2 position, float coordinateTime, bool topSide, float shiftFactor) {
+vec4 diskColor(vec2 position, float coordinateTime, float shiftFactor) {
   if (uDiskEnabled == 0) return vec4(0.0);
   float radius = length(position);
   if (radius <= INNER_DISK_RADIUS || radius >= OUTER_DISK_RADIUS) return vec4(0.0);
 
   float angle = atan(position.y, position.x);
-  float density = accretionDensity(radius, angle, coordinateTime);
-  float edge = smoothstep(INNER_DISK_RADIUS, INNER_DISK_RADIUS * 1.06, radius) *
+  float structure = diskBrightnessStructure(radius, angle, coordinateTime);
+  float edge = smoothstep(INNER_DISK_RADIUS, INNER_DISK_RADIUS * 1.03, radius) *
     (1.0 - smoothstep(OUTER_DISK_RADIUS * 0.91, OUTER_DISK_RADIUS, radius));
   float shift = uDopplerEnabled == 1 ? clamp(shiftFactor, 0.18, 4.0) : 1.0;
-  float thermalVariation = mix(0.88, 1.08, clamp(density, 0.0, 1.0));
-  float temperature = uDiskTemperature * diskTemperatureProfile(radius) * shift * thermalVariation;
-  vec3 radiance = blackBodyRadiance(temperature);
-  float sideAttenuation = topSide ? 1.0 : 0.82;
-  float opticalDepth = edge * uDiskOpacity * (0.25 + 1.1 * uDiskDensity * density);
-  float alpha = 1.0 - exp(-opticalDepth);
-  float emissivity = alpha * (0.9 + 1.15 * uDiskDensity * density);
-  return vec4(radiance * emissivity * sideAttenuation, alpha);
+  float temperature = uDiskPeakTemperature * diskTemperatureProfile(radius) * shift;
+  float brightness = mix(0.94, 1.06, structure);
+  vec3 radiance = blackBodyRadiance(temperature) * uSpectralDilution * brightness;
+  // The thermal thin disk is an optically thick photosphere: texture controls
+  // surface brightness only, while alpha remains one away from its finite edge.
+  return vec4(radiance * edge, edge);
 }
 
 vec3 sceneColor(vec3 viewDirection) {
@@ -358,9 +348,8 @@ vec3 sceneColor(vec3 viewDirection) {
     float sourceDot = energy * sqrt(2.0 / (2.0 - 3.0 * hitU1)) -
       hitU1 * sqrt(hitU1 / (2.0 - 3.0 * hitU1)) * dot(diskNormal, planeNormal);
     float shift = receiverDot / sourceDot;
-    bool topSide = (mod(abs(hitPhi1 - alpha), TAU) < 1e-3) == (radialAxis.z > 0.0);
     vec3 hit = (radialAxis * cos(hitPhi1) + tangentAxis * sin(hitPhi1)) / hitU1;
-    vec4 disk = diskColor(hit.xy, uTime - hitTime1, topSide, shift);
+    vec4 disk = diskColor(hit.xy, uTime - hitTime1, shift);
     color = color * (1.0 - disk.a * hitCoverage1) + disk.rgb * hitCoverage1;
   }
 
@@ -368,9 +357,8 @@ vec3 sceneColor(vec3 viewDirection) {
     float sourceDot = energy * sqrt(2.0 / (2.0 - 3.0 * hitU0)) -
       hitU0 * sqrt(hitU0 / (2.0 - 3.0 * hitU0)) * dot(diskNormal, planeNormal);
     float shift = receiverDot / sourceDot;
-    bool topSide = (mod(abs(hitPhi0 - alpha), TAU) < 1e-3) == (radialAxis.z > 0.0);
     vec3 hit = (radialAxis * cos(hitPhi0) + tangentAxis * sin(hitPhi0)) / hitU0;
-    vec4 disk = diskColor(hit.xy, uTime - hitTime0, topSide, shift);
+    vec4 disk = diskColor(hit.xy, uTime - hitTime0, shift);
     color = color * (1.0 - disk.a * hitCoverage0) + disk.rgb * hitCoverage0;
   }
 

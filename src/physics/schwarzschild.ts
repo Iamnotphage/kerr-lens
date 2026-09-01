@@ -55,16 +55,6 @@ export function staticObserver(
   };
 }
 
-/** Novikov–Thorne/Newtonian-limit zero-torque temperature profile used by V1. */
-export function thinDiskTemperatureRatio(radiusRs: number): number {
-  if (radiusRs <= SCHWARZSCHILD.iscoRs) return 0;
-  const flux = (1 - Math.sqrt(SCHWARZSCHILD.iscoRs / radiusRs)) / radiusRs ** 3;
-  const peakRadius = (49 / 36) * SCHWARZSCHILD.iscoRs;
-  const peakFlux =
-    (1 - Math.sqrt(SCHWARZSCHILD.iscoRs / peakRadius)) / peakRadius ** 3;
-  return Math.pow(Math.max(flux / peakFlux, 0), 0.25);
-}
-
 export function deflectionTextureU(energySquared: number): number {
   const mu = SCHWARZSCHILD.mu;
   if (energySquared < mu) {

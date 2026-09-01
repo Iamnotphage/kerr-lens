@@ -1,5 +1,6 @@
 import "./style.css";
 
+import { thermalDiskParameters } from "./physics/thinDisk";
 import { BlackHoleRenderer, type RendererSettings } from "./render/BlackHoleRenderer";
 import { ObserverController, type ObserverState } from "./render/ObserverController";
 import { PerformanceGovernor, type QualityMode } from "./render/PerformanceGovernor";
@@ -26,7 +27,8 @@ const gestureHint = element<HTMLDivElement>("gesture-hint");
 
 const inclinationInput = element<HTMLInputElement>("inclination");
 const distanceInput = element<HTMLInputElement>("distance");
-const temperatureInput = element<HTMLInputElement>("temperature");
+const massInput = element<HTMLInputElement>("mass");
+const eddingtonRatioInput = element<HTMLInputElement>("eddington-ratio");
 const exposureInput = element<HTMLInputElement>("exposure");
 const qualityInput = element<HTMLSelectElement>("quality");
 const diskInput = element<HTMLInputElement>("disk-enabled");
@@ -36,21 +38,65 @@ const pausedInput = element<HTMLInputElement>("paused");
 
 const inclinationValue = element<HTMLOutputElement>("inclination-value");
 const distanceValue = element<HTMLOutputElement>("distance-value");
-const temperatureValue = element<HTMLOutputElement>("temperature-value");
+const massValue = element<HTMLOutputElement>("mass-value");
+const eddingtonRatioValue = element<HTMLOutputElement>("eddington-ratio-value");
+const colorTemperatureValue = element<HTMLOutputElement>("color-temperature-value");
+const effectiveTemperatureValue = element<HTMLSpanElement>("effective-temperature-value");
+const accretionRateValue = element<HTMLSpanElement>("accretion-rate-value");
 const exposureValue = element<HTMLOutputElement>("exposure-value");
 
 const fpsElement = element<HTMLSpanElement>("fps");
 const frameTimeElement = element<HTMLSpanElement>("frame-time");
 const renderScaleElement = element<HTMLSpanElement>("render-scale");
 
+const initialDisk = thermalDiskParameters(
+  10 ** Number(massInput.value),
+  10 ** Number(eddingtonRatioInput.value),
+);
+
 const initialSettings: RendererSettings = {
-  temperature: Number(temperatureInput.value),
+  peakColorTemperature: initialDisk.peakColorTemperatureK,
+  spectralDilution: initialDisk.spectralDilution,
   exposure: Number(exposureInput.value),
   diskEnabled: diskInput.checked,
   dopplerEnabled: dopplerInput.checked,
   skyEnabled: skyInput.checked,
   paused: pausedInput.checked,
 };
+
+const superscriptDigits: Record<string, string> = {
+  "0": "⁰",
+  "1": "¹",
+  "2": "²",
+  "3": "³",
+  "4": "⁴",
+  "5": "⁵",
+  "6": "⁶",
+  "7": "⁷",
+  "8": "⁸",
+  "9": "⁹",
+};
+
+function formatMass(massSolar: number): string {
+  const exponent = Math.floor(Math.log10(massSolar));
+  const coefficient = massSolar / 10 ** exponent;
+  const exponentLabel = String(exponent)
+    .split("")
+    .map((digit) => superscriptDigits[digit] ?? digit)
+    .join("");
+  const coefficientLabel = coefficient < 1.05 ? "" : `${coefficient.toFixed(1)}×`;
+  return `${coefficientLabel}10${exponentLabel} M☉`;
+}
+
+function formatTemperature(temperatureK: number): string {
+  const rounded = Math.round(temperatureK / 100) * 100;
+  return `${rounded.toLocaleString("en-US")} K`;
+}
+
+function formatAccretionRate(rateSolarPerYear: number): string {
+  const digits = rateSolarPerYear >= 10 ? 1 : rateSolarPerYear >= 1 ? 2 : 3;
+  return `${rateSolarPerYear.toFixed(digits)} M☉/yr`;
+}
 
 function showFatalError(error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
@@ -99,6 +145,22 @@ async function start(): Promise<void> {
     distanceValue.value = `${state.radius.toFixed(1)} rₛ`;
   };
 
+  const updateDiskModel = (): void => {
+    const disk = thermalDiskParameters(
+      10 ** Number(massInput.value),
+      10 ** Number(eddingtonRatioInput.value),
+    );
+    massValue.value = formatMass(disk.massSolar);
+    eddingtonRatioValue.value = `${disk.eddingtonRatio.toFixed(3)} L_Edd`;
+    colorTemperatureValue.value = formatTemperature(disk.peakColorTemperatureK);
+    effectiveTemperatureValue.textContent = formatTemperature(disk.peakEffectiveTemperatureK);
+    accretionRateValue.textContent = formatAccretionRate(disk.accretionRateSolarPerYear);
+    blackHole.updateSettings({
+      peakColorTemperature: disk.peakColorTemperatureK,
+      spectralDilution: disk.spectralDilution,
+    });
+  };
+
   const controller = new ObserverController(canvas, observer, {
     onChange: (next) => {
       observer = next;
@@ -117,11 +179,8 @@ async function start(): Promise<void> {
     controller.setState({ radius: Number(distanceInput.value) });
     governor.markInteraction();
   });
-  temperatureInput.addEventListener("input", () => {
-    const temperature = Number(temperatureInput.value);
-    temperatureValue.value = `${temperature.toLocaleString("en-US")} K`;
-    blackHole.updateSettings({ temperature });
-  });
+  massInput.addEventListener("input", updateDiskModel);
+  eddingtonRatioInput.addEventListener("input", updateDiskModel);
   exposureInput.addEventListener("input", () => {
     const exposure = Number(exposureInput.value);
     exposureValue.value = exposure.toFixed(2);
@@ -147,7 +206,7 @@ async function start(): Promise<void> {
   });
 
   updateObserverUi(observer);
-  temperatureValue.value = `${initialSettings.temperature.toLocaleString("en-US")} K`;
+  updateDiskModel();
   exposureValue.value = initialSettings.exposure.toFixed(2);
   applySize();
   await blackHole.warmup();

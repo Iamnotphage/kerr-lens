@@ -2,7 +2,7 @@
 
 A performance-first, physically grounded black-hole renderer for the web.
 
-Version 1.1 renders a non-rotating Schwarzschild black hole with a thin accretion disk. The project name reflects the destination: a validated Kerr renderer. Schwarzschild is the zero-spin (`a* = 0`) member of that family.
+Version 1.2 renders a non-rotating Schwarzschild black hole with a physically normalized Novikov–Thorne/Page–Thorne thermal disk. The project name reflects the destination: a validated Kerr renderer. Schwarzschild is the zero-spin (`a* = 0`) member of that family.
 
 ## Why this is different
 
@@ -13,7 +13,7 @@ For every pixel, the shader:
 1. constructs a ray in a static observer's Schwarzschild tetrad;
 2. obtains its geodesic deflection and disk intersections from validated lookup tables;
 3. maps the escaped ray onto the celestial sphere;
-4. shades the disk with a zero-torque thin-disk temperature profile;
+4. samples the exact Schwarzschild Page–Thorne flux profile, precomputed into a 256-point texture;
 5. applies gravitational plus orbital Doppler frequency shift at emission; and
 6. converts HDR radiance to the display with an explicit exposure and ACES-style tone map.
 
@@ -43,11 +43,12 @@ exercises the controls, and saves a rendered screenshot as a workflow artifact.
 
 - Drag to orbit the observer while keeping the black hole centered.
 - Scroll to change the observer radius.
-- Adjust inclination, distance, peak disk temperature, and display exposure.
+- Adjust inclination, distance, black-hole mass, Eddington luminosity ratio, and display exposure.
+- Peak effective and color temperatures are derived outputs, not artistic temperature controls.
 - Toggle the disk, relativistic frequency shift, background sky, and animation.
 - Select adaptive, performance, balanced, or high-fidelity render resolution.
 
-Distances use the Schwarzschild radius, `r_s = 2GM/c²`, as the unit. In V1.1:
+Mass and Eddington ratio are logarithmic controls spanning `10⁷–10¹⁰ M☉` and `0.01–0.316 L_Edd`. Distances use the Schwarzschild radius, `r_s = 2GM/c²`, as the unit. In V1.2:
 
 | Quantity | Radius |
 | --- | ---: |
@@ -55,13 +56,15 @@ Distances use the Schwarzschild radius, `r_s = 2GM/c²`, as the unit. In V1.1:
 | Photon sphere | `1.5 r_s` |
 | Critical shadow impact parameter | `3√3/2 ≈ 2.598 r_s` |
 | Innermost stable circular orbit (ISCO) | `3 r_s` |
+| Page–Thorne surface-flux maximum | `4.77546 r_s` |
 
 ## Performance design
 
 - One oversized full-screen triangle; no scene meshes or depth buffer.
 - Constant-time beam tracing through two small floating-point lookup textures.
 - A single render pass with no mandatory bloom chain.
-- Domain-warped accretion turbulence uses three cached noise samples per visible disk hit; there is no particle loop.
+- The radial Page–Thorne temperature calculation is precomputed once into a 1 KiB `R32F` profile.
+- Subtle surface structure uses two cached noise samples per visible disk hit; there is no particle loop.
 - High-performance WebGL context and no MSAA.
 - Render resolution drops temporarily during interaction.
 - Adaptive mode targets 60 fps using an exponential moving average of frame time.
@@ -75,12 +78,15 @@ See [docs/performance.md](docs/performance.md) for budgets and measurement rules
 V1 is a physically grounded renderer of a specific model, not a prediction of one named astronomical object.
 
 - Light propagation follows Schwarzschild null geodesics up to lookup-table interpolation error.
-- The disk is geometrically and optically thin and begins at the Schwarzschild ISCO.
-- Disk temperature follows the standard zero-torque radial profile. V1.1 advects a domain-warped procedural density field with differential Keplerian rotation and couples it to temperature, emissivity, and effective optical depth.
+- The disk is geometrically thin but optically thick and begins at the Schwarzschild ISCO.
+- The one-face surface flux is the relativistic zero-torque Page–Thorne solution. Mass and `L/L_Edd` determine its effective-temperature normalization using the exact zero-spin efficiency `1 - √(8/9) = 5.719%`.
+- A fixed scattering-atmosphere hardening factor `f_col = 1.7` uses the diluted-blackbody spectrum `f_col⁻⁴ Bν(f_col T_eff)`.
+- V1.2 treats procedural motion as a subtle surface-brightness perturbation only. It does not alter opacity or temperature and is not a fluid/GRMHD simulation.
+- The rendered disk is a finite `3–12 r_s` window of a much larger physical disk. Its outer fade is a presentation boundary.
 - The background is an ESO photographic panorama for visual context, not a Gaia-calibrated astrometric or photometric dataset.
 - The star-texture filtering does not implement the full ray-bundle magnification filter from DNGR.
 - Exposure and tone mapping are display choices; absolute brightness depends on mass, accretion rate, wavelength band, and instrument.
-- V1.1 has no spin, frame dragging, polarization, volumetric transfer, magnetic field, or GRMHD flow.
+- V1.2 has no spin, frame dragging, polarization, finite disk thickness, returning radiation, limb darkening, magnetic stress, or GRMHD flow.
 
 These boundaries are intentional and visible in [docs/physics.md](docs/physics.md).
 
@@ -88,7 +94,8 @@ These boundaries are intentional and visible in [docs/physics.md](docs/physics.m
 
 - **V1 — Schwarzschild:** constant-time beam tracing, relativistic thin disk, performance governor, analytic anchors.
 - **V1.1 — accretion flow:** seamless domain-warped turbulence, differential rotation, and coupled thermal/opacity structure without particles or additional passes.
-- **V1.2 — validation:** golden-image comparisons against the reference renderer and browser GPU benchmarks.
+- **V1.2 — physical thermal disk:** exact Schwarzschild Page–Thorne flux, mass/accretion normalization, color hardening, and an optically thick surface material.
+- **V1.3 — validation:** golden-image comparisons against the reference renderer and browser GPU benchmarks.
 - **V2 — Kerr:** spin-dependent horizon, photon region and ISCO; Kerr null geodesics; frame dragging.
 - **V3 — radiative transfer:** optically thin volume emission/absorption and optional scientific datasets.
 

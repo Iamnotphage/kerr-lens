@@ -57,16 +57,73 @@ Screen rays are constructed in the observer's local orthonormal tetrad before be
 
 ## Accretion disk
 
-The disk is a zero-torque, geometrically thin model extending from the Schwarzschild ISCO `r_in = 3 r_s` to `12 r_s`. Its effective temperature is proportional to
+### Relativistic surface flux
+
+V1.2 uses the zero-torque Page–Thorne solution rather than V1.1's Newtonian-limit profile. Let
 
 \[
-T_{eff}(r) \propto
-\left[
-\frac{1-\sqrt{r_{in}/r}}{r^3}
-\right]^{1/4}.
+x = \frac{R c^2}{GM} = \frac{2R}{r_s},
+\qquad
+q(y) = y + \frac{\sqrt{3}}{2}
+\ln\!\left(\frac{y+\sqrt{3}}{y-\sqrt{3}}\right).
 \]
 
-The profile vanishes at the ISCO, peaks at `49/12 r_s`, and then decreases approximately as `r^{-3/4}`. The user control sets the peak temperature.
+For a Schwarzschild disk with its inner edge at `x_ISCO = 6`, the emitted flux from either face is
+
+\[
+F(R)=\frac{3c^6\dot M}{8\pi G^2M^2}
+\frac{q(\sqrt{x})-q(\sqrt{6})}{x^{5/2}(x-3)}.
+\]
+
+The zero-torque boundary makes `F = 0` at the ISCO. The exact relativistic profile peaks at
+
+\[
+R_{peak}=4.7754566\,r_s,
+\]
+
+and approaches the Newtonian `F ∝ R⁻³` law far from the hole. The effective temperature follows Stefan–Boltzmann,
+
+\[
+T_{eff}(R)=\left(\frac{F(R)}{\sigma_{SB}}\right)^{1/4}.
+\]
+
+The CPU evaluates this closed form into a 256-point `R32F` texture over the rendered `3–12 r_s` window. The shader linearly filters that table, avoiding a logarithm and fourth root for every visible disk hit.
+
+### Physical normalization
+
+The UI's Eddington ratio is `λ = L/L_Edd`, with
+
+\[
+L_{Edd}=\frac{4\pi GMm_pc}{\sigma_T}.
+\]
+
+For the Schwarzschild Novikov–Thorne efficiency
+
+\[
+\eta=1-E_{ISCO}=1-\sqrt{\frac{8}{9}}=0.05719096,
+\]
+
+the code converts the two physical controls to
+
+\[
+\dot M=\frac{\lambda L_{Edd}}{\eta c^2}.
+\]
+
+Consequently `T_peak ∝ (λ/M)¹/⁴`: increasing the Eddington ratio by 16 doubles the temperature, while increasing mass by 16 halves it.
+
+### Optically thick spectrum
+
+The disk is mathematically geometrically thin (ray intersections occur at the equatorial plane) but radiatively optically thick. Each hit therefore replaces what lies behind the photosphere instead of behaving like a translucent volume.
+
+V1.2 uses a fixed color-hardening factor `f_col = 1.7` for a scattering-dominated atmosphere:
+
+\[
+T_{col}=f_{col}T_{eff},
+\qquad
+I_\nu=f_{col}^{-4}B_\nu(T_{col}).
+\]
+
+The `f_col⁻⁴` dilution preserves the bolometric surface flux while shifting the spectrum to a higher color temperature. The CIE/Planck table directly covers approximately `102–39,408 K`; hotter samples use a continuous high-temperature extension tending to the Rayleigh–Jeans linear temperature slope.
 
 Matter follows circular equatorial motion. At every ray/disk intersection the renderer evaluates the emitter-to-observer frequency ratio
 
@@ -75,9 +132,11 @@ g = \frac{\nu_{obs}}{\nu_{emit}}
 = \frac{k_\mu u^\mu_{obs}}{k_\mu u^\mu_{emit}},
 \]
 
-which combines gravitational redshift and orbital Doppler shift. Since `I_ν/ν³` is invariant and a shifted black body remains a black body, the observed visible spectrum is sampled at `T_obs = g T_eff` from a CIE/Planck lookup table.
+which combines gravitational redshift and orbital Doppler shift. Since `I_ν/ν³` is invariant and a shifted black body remains a black body, the observed visible spectrum is sampled at `T_obs = g T_col`.
 
-The animated density filaments are procedural and are advected with the Schwarzschild Keplerian angular-rate dependence `Ω ∝ r^{-3/2}`. V1.1 samples a continuous Cartesian noise field after a logarithmic spiral twist, then uses a small domain warp and ridge transform to avoid periodic radial bands. The resulting density perturbs effective temperature, emissivity, and optical depth. It provides spatial detail; it is not a fluid or GRMHD simulation.
+The two-sample procedural field is advected with the Schwarzschild Keplerian angular-rate dependence `Ω ∝ r^{-3/2}`. It changes surface brightness by only about ±6%; it does not change opacity or the Page–Thorne temperature. This provides motion and small-scale detail but is not a fluid or GRMHD simulation. Motion is presented as a time lapse rather than wall-clock physical time.
+
+The physical disk would continue to much larger radii. The current `12 r_s` outer fade bounds the portion sent to the two-intersection beam tracer; it is a display window, not a predicted disk edge. Finite thickness, limb darkening, returning radiation, self-irradiation, atmosphere lines, and magnetic stress across the ISCO remain outside V1.2.
 
 ## Celestial background
 
@@ -94,14 +153,17 @@ Automated tests pin the following independent analytic facts:
 - `r_ph = 1.5 r_s`;
 - `b_c = 3√3/2 r_s`;
 - `r_ISCO = 3 r_s`;
-- the thin-disk temperature maximum is at `49/12 r_s`;
+- the Page–Thorne flux vanishes at `3 r_s`, peaks at `4.7754566 r_s`, and tends to `R⁻³`;
+- `η = 1 - √(8/9)` and `T_peak ∝ (λ/M)¹/⁴`;
 - the static observer tetrad is orthogonal and has the correct radial lapse;
 - lookup coordinate mappings place the two critical branches and apsis correctly.
 
-The upstream project additionally compares its precomputed texture queries against direct numerical integration. V1.2 will add image-level comparisons against both that renderer and an independent CPU oracle.
+The upstream project additionally compares its precomputed texture queries against direct numerical integration. V1.3 will add image-level comparisons against both that renderer and an independent CPU oracle.
 
 ## References
 
 1. Eric Bruneton, [*Real-time High-Quality Rendering of Non-Rotating Black Holes*](https://arxiv.org/abs/2010.08735), 2020.
-2. Oliver James et al., [*Gravitational Lensing by Spinning Black Holes in Astrophysics, and in the Movie Interstellar*](https://arxiv.org/abs/1502.03808), 2015.
-3. Nicolas Aimar et al., [*GYOTO 2.0: a polarized relativistic ray-tracing code*](https://arxiv.org/abs/2311.18802), 2023.
+2. Don Page and Kip Thorne, [*Disk-Accretion onto a Black Hole. Time-Averaged Structure of Accretion Disk*](https://doi.org/10.1086/152990), 1974.
+3. Scott Noble et al., [*Radiative Efficiency and Thermal Spectrum of Accretion onto Schwarzschild Black Holes*](https://arxiv.org/abs/1105.2825), 2011.
+4. Oliver James et al., [*Gravitational Lensing by Spinning Black Holes in Astrophysics, and in the Movie Interstellar*](https://arxiv.org/abs/1502.03808), 2015.
+5. Nicolas Aimar et al., [*GYOTO 2.0: a polarized relativistic ray-tracing code*](https://arxiv.org/abs/2311.18802), 2023.

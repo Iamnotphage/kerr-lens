@@ -19,6 +19,14 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   await expect(page.locator("#toggle-panel")).toHaveAttribute("aria-expanded", "true");
   await page.locator("#inclination").fill("42");
   await expect(page.locator("#inclination-value")).toHaveText("42°");
+  await page.locator("#mass").fill("9");
+  await page.locator("#eddington-ratio").fill("-1");
+  await expect(page.locator("#mass-value")).toHaveText("10⁹ M☉");
+  await expect(page.locator("#eddington-ratio-value")).toHaveText("0.100 L_Edd");
+  await expect(page.locator("#color-temperature-value")).toHaveText("67,100 K");
+  await page.locator("#mass").fill("9.5");
+  await page.locator("#eddington-ratio").fill("-1.5");
+  await expect(page.locator("#color-temperature-value")).toHaveText("37,800 K");
   await page.locator("#doppler-enabled").uncheck({ force: true });
   await expect(page.locator("#doppler-enabled")).not.toBeChecked();
   await page.locator("#doppler-enabled").check({ force: true });
@@ -34,5 +42,5 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   expect(canvasBounds?.height).toBeGreaterThan(400);
   expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
 
-  await page.screenshot({ path: testInfo.outputPath("kerr-lens-v1.1.png"), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath("kerr-lens-v1.2.png"), fullPage: true });
 });

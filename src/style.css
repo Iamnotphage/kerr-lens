@@ -264,6 +264,36 @@ input[type="checkbox"] {
   font-size: 9px;
 }
 
+.model-readout {
+  display: grid;
+  gap: 4px;
+  margin: 16px 0 2px;
+  padding: 11px 12px;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 2.5%);
+}
+
+.model-readout > span {
+  color: #717c8f;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 7px;
+  letter-spacing: 0.09em;
+}
+
+.model-readout output {
+  color: #e6eaf0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+.model-readout small {
+  color: #7c8799;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 7px;
+  line-height: 1.5;
+}
+
 input[type="range"] {
   width: 100%;
   height: 16px;

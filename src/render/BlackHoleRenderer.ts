@@ -20,7 +20,8 @@ import type { ObserverState } from "./ObserverController";
 import type { PhysicsTextures } from "./loadPhysicsTextures";
 
 export interface RendererSettings {
-  temperature: number;
+  peakColorTemperature: number;
+  spectralDilution: number;
   exposure: number;
   diskEnabled: boolean;
   dopplerEnabled: boolean;
@@ -89,13 +90,13 @@ export class BlackHoleRenderer {
         uDeflectionTexture: { value: physicsTextures.deflection },
         uInverseRadiusTexture: { value: physicsTextures.inverseRadius },
         uBlackBodyTexture: { value: physicsTextures.blackBody },
+        uDiskTemperatureTexture: { value: physicsTextures.diskTemperature },
         uNoiseTexture: { value: physicsTextures.noise },
         uSkyTexture: { value: physicsTextures.sky },
         uTime: { value: 0 },
         uExposure: { value: settings.exposure },
-        uDiskTemperature: { value: settings.temperature },
-        uDiskDensity: { value: 0.9 },
-        uDiskOpacity: { value: 0.92 },
+        uDiskPeakTemperature: { value: settings.peakColorTemperature },
+        uSpectralDilution: { value: settings.spectralDilution },
         uDiskEnabled: { value: settings.diskEnabled ? 1 : 0 },
         uDopplerEnabled: { value: settings.dopplerEnabled ? 1 : 0 },
         uSkyEnabled: { value: settings.skyEnabled ? 1 : 0 },
@@ -132,7 +133,12 @@ export class BlackHoleRenderer {
 
   updateSettings(settings: Partial<RendererSettings>): void {
     this.settings = { ...this.settings, ...settings };
-    if (settings.temperature !== undefined) this.material.uniforms.uDiskTemperature!.value = settings.temperature;
+    if (settings.peakColorTemperature !== undefined) {
+      this.material.uniforms.uDiskPeakTemperature!.value = settings.peakColorTemperature;
+    }
+    if (settings.spectralDilution !== undefined) {
+      this.material.uniforms.uSpectralDilution!.value = settings.spectralDilution;
+    }
     if (settings.exposure !== undefined) this.material.uniforms.uExposure!.value = settings.exposure;
     if (settings.diskEnabled !== undefined) this.material.uniforms.uDiskEnabled!.value = settings.diskEnabled ? 1 : 0;
     if (settings.dopplerEnabled !== undefined) this.material.uniforms.uDopplerEnabled!.value = settings.dopplerEnabled ? 1 : 0;
@@ -161,6 +167,7 @@ export class BlackHoleRenderer {
       "uDeflectionTexture",
       "uInverseRadiusTexture",
       "uBlackBodyTexture",
+      "uDiskTemperatureTexture",
       "uNoiseTexture",
       "uSkyTexture",
     ]) {

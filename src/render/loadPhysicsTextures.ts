@@ -7,6 +7,7 @@ import {
   LoadingManager,
   NoColorSpace,
   RGBAFormat,
+  RedFormat,
   RGFormat,
   RepeatWrapping,
   SRGBColorSpace,
@@ -14,12 +15,39 @@ import {
   TextureLoader,
 } from "three";
 
+import {
+  THERMAL_DISK_OUTER_RADIUS_RS,
+  pageThorneTemperatureRatio,
+} from "../physics/thinDisk";
+
 export interface PhysicsTextures {
   readonly deflection: DataTexture;
   readonly inverseRadius: DataTexture;
   readonly blackBody: DataTexture;
+  readonly diskTemperature: DataTexture;
   readonly noise: Texture;
   readonly sky: Texture;
+}
+
+function diskTemperatureTexture(): DataTexture {
+  const width = 256;
+  const data = new Float32Array(width);
+  for (let index = 0; index < width; index += 1) {
+    const radius =
+      3 + (index / (width - 1)) * (THERMAL_DISK_OUTER_RADIUS_RS - 3);
+    data[index] = pageThorneTemperatureRatio(radius);
+  }
+
+  const texture = new DataTexture(data, width, 1, RedFormat, FloatType);
+  texture.name = "Page–Thorne temperature profile";
+  texture.colorSpace = NoColorSpace;
+  texture.minFilter = LinearFilter;
+  texture.magFilter = LinearFilter;
+  texture.wrapS = ClampToEdgeWrapping;
+  texture.wrapT = ClampToEdgeWrapping;
+  texture.generateMipmaps = false;
+  texture.needsUpdate = true;
+  return texture;
 }
 
 async function fetchBuffer(url: string, onFraction: (fraction: number) => void): Promise<ArrayBuffer> {
@@ -152,6 +180,7 @@ export async function loadPhysicsTextures(
     deflection: lookupTexture(deflectionData, "Schwarzschild ray deflection"),
     inverseRadius: lookupTexture(inverseData, "Schwarzschild inverse radius"),
     blackBody: blackBodyTexture(blackBodyData),
+    diskTemperature: diskTemperatureTexture(),
     noise,
     sky,
   };

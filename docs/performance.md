@@ -15,10 +15,12 @@ The render path is deliberately bounded:
 - no per-ray integration loop;
 - fixed lookup count for lensing and disk intersection;
 - at most two disk-shading evaluations;
-- three small, mipmapped noise samples per visible disk hit;
+- one cached Page–Thorne profile lookup and two small, mipmapped noise samples per visible disk hit;
 - no compulsory post-processing chain.
 
 The 2048×1024 Milky Way panorama adds 284 KiB to the transfer and approximately 10.7 MiB of GPU memory including mip levels. It replaces the previous CPU-generated sky without adding a render pass or per-frame upload.
+
+V1.2 computes the relativistic temperature curve once on the CPU and uploads a 256×1 `R32F` texture (1 KiB). This replaces per-fragment logarithms and fourth roots with one coherent lookup. The optically thick material also removes V1.1's exponential optical-depth evaluation and reduces its turbulence field from three samples to two.
 
 ## Adaptive resolution
 
