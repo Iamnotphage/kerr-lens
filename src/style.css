@@ -155,6 +155,97 @@ input[type="checkbox"] {
   text-shadow: 0 1px 12px #000;
 }
 
+.benchmark-panel {
+  position: absolute;
+  z-index: 6;
+  top: 50%;
+  left: max(4.5vw, 44px);
+  width: min(410px, calc(100vw - 48px));
+  padding: 23px;
+  transform: translateY(-50%);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgb(8 12 21 / 84%);
+  box-shadow: 0 24px 70px rgb(0 0 0 / 44%);
+  backdrop-filter: blur(22px) saturate(125%);
+}
+
+.benchmark-panel h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 28px;
+  font-weight: 400;
+}
+
+.benchmark-panel > p:not(.eyebrow, .benchmark-gpu) {
+  margin: 10px 0 18px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.benchmark-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+
+.benchmark-grid div {
+  display: grid;
+  gap: 5px;
+  padding: 11px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.benchmark-grid span,
+.benchmark-grid output,
+.benchmark-gpu,
+.benchmark-copy {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.benchmark-grid span {
+  color: #6f7a8d;
+  font-size: 7px;
+  letter-spacing: 0.1em;
+}
+
+.benchmark-grid output {
+  color: #e6eaf0;
+  font-size: 11px;
+}
+
+.benchmark-gpu {
+  margin: 14px 0;
+  color: #778296;
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.benchmark-copy {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid rgb(237 176 106 / 30%);
+  border-radius: 8px;
+  color: #e7c49d;
+  background: rgb(220 148 75 / 8%);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.benchmark-mode .hero-copy,
+.benchmark-mode .panel,
+.benchmark-mode .gesture-hint,
+.benchmark-mode .sky-credit {
+  display: none;
+}
+
+.benchmark-panel[data-state="complete"] {
+  border-color: rgb(129 211 169 / 32%);
+}
+
 .panel {
   position: absolute;
   z-index: 5;

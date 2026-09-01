@@ -1,16 +1,26 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
-test("compiles the WebGL renderer and draws an interactive frame", async ({ page }, testInfo) => {
+function watchRuntimeErrors(page: Page): string[] {
   const runtimeErrors: string[] = [];
   page.on("pageerror", (error) => runtimeErrors.push(error.message));
   page.on("console", (message) => {
     if (message.type() === "error") runtimeErrors.push(message.text());
   });
+  return runtimeErrors;
+}
 
-  await page.goto("/");
+async function waitForRenderer(page: Page): Promise<void> {
   await expect(page.locator("#loading")).toBeHidden();
   await expect(page.locator("#fatal-error")).toBeHidden();
   await expect(page.locator("#scene")).toBeVisible();
+  await expect(page.locator("body")).toHaveAttribute("data-validation-ready", "true");
+}
+
+test("compiles the WebGL renderer and draws an interactive frame", async ({ page }, testInfo) => {
+  const runtimeErrors = watchRuntimeErrors(page);
+
+  await page.goto("/");
+  await waitForRenderer(page);
   await expect(page.locator("#fps")).not.toHaveText(/--/);
   await expect(page.locator("#render-scale")).toContainText("×");
   await expect(page.locator("#toggle-panel")).toHaveAttribute("aria-expanded", "false");
@@ -55,7 +65,7 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   expect(canvasBounds?.height).toBeGreaterThan(400);
   expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
 
-  await page.screenshot({ path: testInfo.outputPath("kerr-lens-v1.2.1.png"), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath("kerr-lens-v1.3.png"), fullPage: true });
 
   // A near face-on view exposes any angular wrap discontinuity as a radial
   // wedge, so preserve it as explicit visual evidence in the CI artifact.
@@ -64,4 +74,72 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   await page.locator("#toggle-panel").click();
   await page.waitForTimeout(300);
   await page.screenshot({ path: testInfo.outputPath("disk-seam-probe.png"), fullPage: true });
+});
+
+test("captures the V1.3 appearance and inclination validation matrix", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(90_000);
+  const runtimeErrors = watchRuntimeErrors(page);
+  await page.goto("/");
+  await waitForRenderer(page);
+
+  const panelButton = page.locator("#toggle-panel");
+  await panelButton.click();
+  await page.locator("#quality").selectOption("balanced");
+  await page.locator("#paused").check({ force: true });
+
+  for (const appearance of ["cinematic", "scientific"] as const) {
+    await page.locator("#disk-appearance").selectOption(appearance);
+    for (const inclination of [8, 45, 85]) {
+      await page.locator("#inclination").fill(String(inclination));
+      await panelButton.click();
+      await page.waitForTimeout(180);
+      await page.screenshot({
+        path: testInfo.outputPath(`matrix-${appearance}-${inclination}deg.png`),
+        fullPage: true,
+      });
+      await panelButton.click();
+    }
+  }
+
+  expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
+});
+
+test("exports a fixed-scene frame-time distribution", async ({ page }, testInfo) => {
+  test.setTimeout(60_000);
+  const runtimeErrors = watchRuntimeErrors(page);
+  await page.goto("/?benchmark=1&frames=120");
+  await waitForRenderer(page);
+  await expect(page.locator("#benchmark-panel")).toHaveAttribute("data-state", "complete", {
+    timeout: 45_000,
+  });
+
+  const report = await page.evaluate(() => {
+    const validationWindow = window as typeof window & {
+      __KERR_LENS_VALIDATION__?: { getReport: () => unknown };
+    };
+    return validationWindow.__KERR_LENS_VALIDATION__?.getReport();
+  });
+  expect(report).toBeTruthy();
+  const result = report as {
+    frames: { sampleCount: number; medianMs: number; p95Ms: number; p99Ms: number };
+    drawingBuffer: [number, number];
+    gpu: { drawCalls: number; triangles: number; renderer: string };
+  };
+  expect(result.frames.sampleCount).toBe(120);
+  expect(result.frames.p95Ms).toBeGreaterThanOrEqual(result.frames.medianMs);
+  expect(result.frames.p99Ms).toBeGreaterThanOrEqual(result.frames.p95Ms);
+  expect(result.drawingBuffer[0]).toBeGreaterThan(0);
+  expect(result.drawingBuffer[1]).toBeGreaterThan(0);
+  expect(result.gpu.drawCalls).toBe(1);
+  expect(result.gpu.triangles).toBe(1);
+  expect(result.gpu.renderer.length).toBeGreaterThan(0);
+  expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
+
+  await testInfo.attach("benchmark-v1.3.json", {
+    body: JSON.stringify(report, null, 2),
+    contentType: "application/json",
+  });
+  await page.screenshot({ path: testInfo.outputPath("benchmark-v1.3.png"), fullPage: true });
 });

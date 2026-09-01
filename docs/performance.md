@@ -48,10 +48,27 @@ Benchmark only after the loading layer disappears and at least five seconds of s
 
 The on-screen HUD is a live diagnostic based on an EMA, not a publishable benchmark.
 
+## V1.3 benchmark mode
+
+Append `?benchmark=1` to the application URL to run a controlled browser sample.
+The mode fixes balanced render scale and animation time, discards 90 warm-up frames,
+then records 600 `requestAnimationFrame` intervals. The report contains median, p95,
+p99, mean, minimum and maximum frame time together with:
+
+- unmasked GPU/driver string when the browser exposes it;
+- WebGL version;
+- CSS device pixel ratio and drawing-buffer dimensions; and
+- draw-call and triangle counts.
+
+The panel can copy the complete JSON report. `frames` may be set from 60 to 1200,
+for example `?benchmark=1&frames=1200`. Compare only runs with the same browser,
+GPU, viewport, device-pixel ratio, quality, and scene. A greater than 5% change in
+median or p95 under a matched environment is a regression investigation trigger,
+not an automatic proof of a shader regression.
+
 ## Future work
 
 - GPU timer queries where `EXT_disjoint_timer_query_webgl2` is available;
-- an automated benchmark route with fixed camera and animation time;
 - RG16F lookup-table error study to test whether halving lookup bandwidth is safe;
 - shader variants that compile out disabled disk/sky branches;
 - WebGPU/TSL backend after parity images and numerical tolerances are defined.
