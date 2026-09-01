@@ -255,20 +255,19 @@ vec2 flowEpochOffset(float epoch) {
 }
 
 float advectedDiskStructure(
-  vec2 position,
+  vec2 direction,
   float radius,
+  float omega,
+  float spiralTwist,
   float fieldAge,
   vec2 epochOffset
 ) {
-  float omega = sqrt(0.5 / (radius * radius * radius));
-
   // Rotate the normalized disk-plane position directly instead of recovering
   // its angle with atan(). This is exactly continuous across the negative-x
   // axis, where atan(y, x) changes branch from +PI to -PI.
-  float twist = -fieldAge * omega + 1.35 * log(radius / INNER_DISK_RADIUS);
+  float twist = -fieldAge * omega + spiralTwist;
   float cosTwist = cos(twist);
   float sinTwist = sin(twist);
-  vec2 direction = position / radius;
   vec2 flowDirection = vec2(
     cosTwist * direction.x - sinTwist * direction.y,
     sinTwist * direction.x + cosTwist * direction.y
@@ -292,6 +291,10 @@ float advectedDiskStructure(
 }
 
 float diskBrightnessStructure(vec2 position, float radius, float coordinateTime) {
+  float inverseRadius = 1.0 / radius;
+  vec2 direction = position * inverseRadius;
+  float omega = sqrt(0.5 * inverseRadius * inverseRadius * inverseRadius);
+  float spiralTwist = 1.35 * log(radius / INNER_DISK_RADIUS);
   float cycle = coordinateTime / FLOW_COHERENCE_TIME + 0.5;
   float epoch = floor(cycle);
   float phase = fract(cycle);
@@ -301,14 +304,18 @@ float diskBrightnessStructure(vec2 position, float radius, float coordinateTime)
   // becomes the new previous field at the exact same age, and the zero-slope
   // smoothstep weights make both value and first temporal derivative continuous.
   float previous = advectedDiskStructure(
-    position,
+    direction,
     radius,
+    omega,
+    spiralTwist,
     (phase + 1.0) * FLOW_COHERENCE_TIME,
     flowEpochOffset(epoch - 1.0)
   );
   float current = advectedDiskStructure(
-    position,
+    direction,
     radius,
+    omega,
+    spiralTwist,
     phase * FLOW_COHERENCE_TIME,
     flowEpochOffset(epoch)
   );
