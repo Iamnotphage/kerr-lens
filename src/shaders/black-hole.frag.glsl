@@ -222,7 +222,9 @@ vec3 skyColor(vec3 direction) {
 
 vec3 blackBodyRadiance(float temperature) {
   float textureU = clamp(log(max(temperature, 100.0) / 100.0) / 6.0, 0.0, 1.0);
-  return texture(uBlackBodyTexture, vec2(textureU, 0.5)).rgb * 1e-6;
+  // Absolute detector exposure is unspecified; this scale places the physical
+  // radiance ratios in a useful HDR range before the user exposure control.
+  return texture(uBlackBodyTexture, vec2(textureU, 0.5)).rgb * 3e-8;
 }
 
 float diskTemperatureProfile(float radius) {

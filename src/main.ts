@@ -12,7 +12,7 @@ function element<T extends HTMLElement>(id: string): T {
 }
 
 const DEFAULT_OBSERVER: ObserverState = {
-  radius: 16,
+  radius: 26,
   inclination: (68 * Math.PI) / 180,
   azimuth: 0.36,
 };

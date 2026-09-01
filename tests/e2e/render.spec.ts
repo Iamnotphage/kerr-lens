@@ -16,8 +16,13 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
 
   await page.locator("#inclination").fill("42");
   await expect(page.locator("#inclination-value")).toHaveText("42°");
-  await page.locator("#doppler-enabled").uncheck();
-  await page.locator("#doppler-enabled").check();
+  await page.locator("#doppler-enabled").uncheck({ force: true });
+  await expect(page.locator("#doppler-enabled")).not.toBeChecked();
+  await page.locator("#doppler-enabled").check({ force: true });
+  await expect(page.locator("#doppler-enabled")).toBeChecked();
+  await page.locator("#reset-view").click();
+  await expect(page.locator("#inclination-value")).toHaveText("68°");
+  await expect(page.locator("#distance-value")).toHaveText("26.0 rₛ");
 
   const canvasBounds = await page.locator("#scene").boundingBox();
   expect(canvasBounds?.width).toBeGreaterThan(600);
