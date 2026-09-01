@@ -231,7 +231,7 @@ vec3 blackBodyRadiance(float temperature) {
   float highTemperatureScale = 1.35 * hotRatio - 0.35;
   // Absolute detector exposure is unspecified; this scale places the physical
   // radiance ratios in a useful HDR range before the user exposure control.
-  return texture(uBlackBodyTexture, vec2(textureU, 0.5)).rgb * highTemperatureScale * 3e-8;
+  return texture(uBlackBodyTexture, vec2(textureU, 0.5)).rgb * highTemperatureScale * 1.35e-8;
 }
 
 float diskTemperatureProfile(float radius) {
@@ -266,7 +266,7 @@ vec4 diskColor(vec2 position, float coordinateTime, float shiftFactor) {
     (1.0 - smoothstep(OUTER_DISK_RADIUS * 0.91, OUTER_DISK_RADIUS, radius));
   float shift = uDopplerEnabled == 1 ? clamp(shiftFactor, 0.18, 4.0) : 1.0;
   float temperature = uDiskPeakTemperature * diskTemperatureProfile(radius) * shift;
-  float brightness = mix(0.94, 1.06, structure);
+  float brightness = mix(0.92, 1.08, structure);
   vec3 radiance = blackBodyRadiance(temperature) * uSpectralDilution * brightness;
   // The thermal thin disk is an optically thick photosphere: texture controls
   // surface brightness only, while alpha remains one away from its finite edge.
