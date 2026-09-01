@@ -94,8 +94,10 @@ is not limited by the lower-resolution transfer target.
 The map does not integrate singular Boyer–Lindquist azimuth directly. It evolves the
 Cartesian angular direction, whose derivative stays finite at the spin axis, and folds
 midpoint overshoot at the exact Carter polar root. Even transfer dimensions keep the
-measure-zero axial ray between texel centers. This removes chart seams without adding
-display-time filtering or an unbounded near-axis step count.
+measure-zero axial ray between texel centers. On invalidation, a six-column MRT pass
+reconstructs the remaining undersampled axial footprint and copies it back into the map.
+The strip costs about 41 KiB at a 288-pixel map height and adds no display-time branch or
+filtering.
 
 Equatorial crossings are retained through a `2.25–14 r_s` guard band around the visible
 `3–12 r_s` annulus. The full-resolution display shader evaluates the actual disk edge from
@@ -105,7 +107,8 @@ narrow spherical strip so lensing cannot turn an asset seam into a screen-space 
 
 Changing spin, inclination, observer radius, or viewport aspect invalidates the map. The
 renderer waits 55 ms for a stream of input events to settle, performs one offscreen MRT
-draw with a fixed 224-step Carter integrator, then returns to the steady-state contract:
+draw with a fixed 224-step Carter integrator plus the six-column repair pass, then returns
+to the steady-state contract:
 
 - one display draw call and one full-screen triangle;
 - three transfer samples plus one one-dimensional shadow sample at every pixel;
