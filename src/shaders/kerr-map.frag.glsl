@@ -13,7 +13,25 @@ uniform float uObserverInclination;
 
 const float INNER_DISK_RADIUS_RS = 3.0;
 const float OUTER_DISK_RADIUS_RS = 12.0;
+const float POLAR_CHART_CAP = 0.995;
 const int MAX_STEPS = 224;
+
+float polarChartAzimuthJump(float lambda, float eta) {
+  float spinSquared = uSpin * uSpin;
+  float coefficient = spinSquared - eta - lambda * lambda;
+  float turningCosineSquared;
+  if (spinSquared > 1e-5) {
+    turningCosineSquared =
+      (coefficient + sqrt(max(coefficient * coefficient + 4.0 * spinSquared * eta, 0.0))) /
+      (2.0 * spinSquared);
+  } else {
+    turningCosineSquared = eta / max(eta + lambda * lambda, 1e-6);
+  }
+  float turningSine = sqrt(max(1.0 - clamp(turningCosineSquared, 0.0, 1.0), 0.0));
+  float capSine = sqrt(1.0 - POLAR_CHART_CAP * POLAR_CHART_CAP);
+  float halfJump = acos(clamp(turningSine / capSine, 0.0, 1.0));
+  return (lambda >= 0.0 ? -2.0 : 2.0) * halfJump;
+}
 
 float radialPotential(float radius, float lambda, float eta) {
   float delta = radius * radius - 2.0 * radius + uSpin * uSpin;
@@ -143,6 +161,16 @@ void main() {
       radialSign = -radialSign;
       continue;
     }
+    // Boyer–Lindquist azimuth is singular on the spin axis. A ray entering
+    // this polar chart cap exits on the opposite meridian: phi changes by pi
+    // while the physical Cartesian direction stays continuous. Resolving the
+    // lambda/sin²(theta) spike with uniform affine steps causes a false
+    // vertical seam, so perform the equivalent chart transition explicitly.
+    if (abs(midpoint.y) >= POLAR_CHART_CAP) {
+      polarSign = -polarSign;
+      phi += polarChartAzimuthJump(lambda, eta);
+      continue;
+    }
     if (
       abs(midpoint.y) >= 0.999999 ||
       polarPotential(midpoint.y, lambda, eta) < -2e-5
@@ -164,6 +192,11 @@ void main() {
 
     if (radialPotential(next.x, lambda, eta) < -5e-4) {
       radialSign = -radialSign;
+      continue;
+    }
+    if (abs(next.y) >= POLAR_CHART_CAP) {
+      polarSign = -polarSign;
+      phi += polarChartAzimuthJump(lambda, eta);
       continue;
     }
     if (abs(next.y) >= 1.0 || polarPotential(next.y, lambda, eta) < -5e-5) {

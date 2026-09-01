@@ -162,6 +162,12 @@ Using `mu` removes a sine/cosine pair from every step and gives the polynomial
 \]
 
 Radial and polar signs reverse only at their respective potential turning points.
+Because Boyer–Lindquist azimuth is undefined on the spin axis, the GPU performs an
+explicit polar-chart transition when a ray enters a small cap. The skipped azimuth
+is the near-axis integral determined by the exact polar turning root; it tends to
+`phi -> phi ± pi` as `lambda -> 0`. This is a coordinate regularization, not a
+physical kick to the ray, and prevents an unresolved `lambda/sin²(theta)` spike
+from becoming a screen seam.
 The first two valid crossings of `mu = 0` become ordered thin-disk intersections,
 stored as Cartesian disk-plane coordinates to avoid interpolating across an azimuth
 branch cut;

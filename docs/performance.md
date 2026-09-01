@@ -91,6 +91,12 @@ jump by `2π` and create a visible interpolation seam. A 512-sample `R32F`
 polar profile independently evaluates the finite-observer Kerr critical curve so its edge
 is not limited by the lower-resolution transfer target.
 
+At the Boyer–Lindquist polar coordinate singularity, the map evaluates the near-axis
+azimuth jump from the polar turning root instead of spending many uniform steps on the
+integrable `lambda/sin²(theta)` spike. The jump approaches an opposite-meridian transition
+for zero axial angular momentum. This removes a false center seam while keeping the fixed
+rebuild budget bounded.
+
 Changing spin, inclination, observer radius, or viewport aspect invalidates the map. The
 renderer waits 55 ms for a stream of input events to settle, performs one offscreen MRT
 draw with a fixed 224-step Carter integrator, then returns to the steady-state contract:

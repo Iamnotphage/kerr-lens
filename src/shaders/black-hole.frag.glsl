@@ -539,18 +539,20 @@ vec3 kerrSceneColor(vec2 screen) {
   vec4 hit1 = texture(uKerrDiskHit1Texture, transferUv);
   float hitCoverage1 = smoothstep(0.2, 0.8, hit1.a);
   if (hitCoverage1 > 0.0) {
-    vec2 hitPosition = rotateDiskPosition(hit1.xy, uCameraCoordinates.w);
+    float hitWeight = max(hit1.a, 1e-4);
+    vec2 hitPosition = rotateDiskPosition(hit1.xy / hitWeight, uCameraCoordinates.w);
     float shift = v21FrequencyShift(length(hitPosition), lambda);
-    vec4 disk = diskColor(hitPosition, uTime - hit1.z, shift);
+    vec4 disk = diskColor(hitPosition, uTime - hit1.z / hitWeight, shift);
     color = color * (1.0 - disk.a * hitCoverage1) + disk.rgb * hitCoverage1;
   }
 
   vec4 hit0 = texture(uKerrDiskHit0Texture, transferUv);
   float hitCoverage0 = smoothstep(0.2, 0.8, hit0.a);
   if (hitCoverage0 > 0.0) {
-    vec2 hitPosition = rotateDiskPosition(hit0.xy, uCameraCoordinates.w);
+    float hitWeight = max(hit0.a, 1e-4);
+    vec2 hitPosition = rotateDiskPosition(hit0.xy / hitWeight, uCameraCoordinates.w);
     float shift = v21FrequencyShift(length(hitPosition), lambda);
-    vec4 disk = diskColor(hitPosition, uTime - hit0.z, shift);
+    vec4 disk = diskColor(hitPosition, uTime - hit0.z / hitWeight, shift);
     color = color * (1.0 - disk.a * hitCoverage0) + disk.rgb * hitCoverage0;
   }
 
