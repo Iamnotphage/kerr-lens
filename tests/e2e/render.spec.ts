@@ -44,12 +44,14 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   await expect(page.locator("#toggle-panel")).toHaveAttribute("aria-expanded", "true");
   await expect(page.locator("#disk-appearance")).toHaveValue("cinematic");
   await expect(page.locator("#quality")).toHaveValue("high");
-  await expect(page.locator("#interaction-fallback")).not.toBeChecked();
+  await expect(page.locator("#interaction-fallback")).toHaveCount(0);
+  await expect(page.locator("#model-kerr")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#model-schwarzschild")).toHaveAttribute("aria-pressed", "false");
   await expect(page.locator("#spin-value")).toHaveText("+0.800");
   await expect(page.locator("#spacetime-status-title")).toHaveText("PROGRADE KERR LENSING");
   await expect(page.locator("#kerr-horizon-value")).toHaveText("0.800 rₛ");
   await page.locator("#spin").fill("0");
-  await expect(page.locator("#spacetime-status-title")).toHaveText("EXACT SCHWARZSCHILD LIMIT");
+  await expect(page.locator("#spacetime-status-title")).toHaveText("ZERO-SPIN KERR LIMIT");
   await expect(page.locator("#kerr-horizon-value")).toHaveText("1.000 rₛ");
   await expect(page.locator("#kerr-photon-value")).toHaveText("1.500 rₛ");
   await expect(page.locator("#kerr-isco-value")).toHaveText("3.000 rₛ");
@@ -64,7 +66,7 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   await expect(page.locator("#spacetime-status-title")).toHaveText("RETROGRADE KERR LENSING");
   await expect(page.locator("#kerr-isco-value")).toHaveText("4.359 rₛ");
   await page.locator("#spin").fill("0");
-  await expect(page.locator("#spacetime-status-title")).toHaveText("EXACT SCHWARZSCHILD LIMIT");
+  await expect(page.locator("#spacetime-status-title")).toHaveText("ZERO-SPIN KERR LIMIT");
   await expect(page.locator("#color-temperature-value")).toHaveText("4,500 K");
   await expect(page.locator("#model-readout-detail")).toContainText("mild warm grade");
   await expect(page.locator("#mass")).toBeDisabled();
@@ -141,6 +143,52 @@ test("renders distinct positive and negative Kerr lens maps", async ({ page }, t
   expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
 });
 
+test("switches models manually and restores the previous Kerr spin", async ({ page }) => {
+  const runtimeErrors = watchRuntimeErrors(page);
+  await page.goto("/");
+  await waitForRenderer(page);
+  await page.locator("#toggle-panel").click();
+
+  await page.locator("#spin").fill("-0.65");
+  await waitForKerrMap(page, -0.65);
+  await page.locator("#model-schwarzschild").click();
+
+  await expect(page.locator("#model-kerr")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("#model-schwarzschild")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#panel-title")).toHaveText("Schwarzschild lensing");
+  await expect(page.locator("#spacetime-metric-label")).toHaveText("SCHWARZSCHILD PARAMETERS");
+  await expect(page.locator("#spacetime-status-title")).toHaveText(
+    "EXACT SCHWARZSCHILD LENSING",
+  );
+  await expect(page.locator("#spin")).toBeDisabled();
+  await expect(page.locator("#spin")).toHaveValue("0");
+  await expect(page.locator("#spin-value")).toHaveText("0.000");
+
+  const schwarzschild = await page.evaluate(() => {
+    return window.__KERR_LENS_VALIDATION__?.getReport();
+  });
+  expect(schwarzschild?.spacetimeModel).toBe("schwarzschild");
+  expect(schwarzschild?.kerr.spin).toBe(0);
+  expect(schwarzschild?.gpu.kerrLensing.displayed).toBe(false);
+
+  await page.locator("#model-kerr").click();
+  await expect(page.locator("#model-kerr")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#model-schwarzschild")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("#panel-title")).toHaveText("Kerr lensing");
+  await expect(page.locator("#spin")).toBeEnabled();
+  await expect(page.locator("#spin")).toHaveValue("-0.65");
+  await expect(page.locator("#spin-value")).toHaveText("-0.650");
+  await waitForKerrMap(page, -0.65);
+
+  const kerr = await page.evaluate(() => {
+    return window.__KERR_LENS_VALIDATION__?.getReport();
+  });
+  expect(kerr?.spacetimeModel).toBe("kerr");
+  expect(kerr?.kerr.spin).toBe(-0.65);
+  expect(kerr?.gpu.kerrLensing.displayed).toBe(true);
+  expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
+});
+
 test("keeps full-quality Kerr rendering active during drag by default", async ({
   page,
 }) => {
@@ -169,59 +217,16 @@ test("keeps full-quality Kerr rendering active during drag by default", async ({
   await page.mouse.up();
 
   expect(duringDrag?.observer.inclination).not.toBeCloseTo((85 * Math.PI) / 180, 4);
-  expect(duringDrag?.interactionFallback).toBe(false);
+  expect(duringDrag?.spacetimeModel).toBe("kerr");
   expect(duringDrag?.drawingBuffer).toEqual(beforeDrag?.drawingBuffer);
   expect(duringDrag?.gpu.kerrLensing.ready).toBe(true);
   expect(duringDrag?.gpu.kerrLensing.displayed).toBe(true);
-  expect(duringDrag?.gpu.kerrLensing.deferredUpdatesEnabled).toBe(false);
   await expect.poll(async () => {
     const report = await page.evaluate(() => {
       return window.__KERR_LENS_VALIDATION__?.getReport();
     });
     return report?.gpu.kerrLensing.observerInclination;
   }).toBeCloseTo(duringDrag!.observer.inclination, 4);
-  expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
-});
-
-test("only enables interaction degradation after explicit opt-in", async ({ page }) => {
-  const runtimeErrors = watchRuntimeErrors(page);
-  await page.goto("/");
-  await waitForRenderer(page);
-  await waitForKerrMap(page, 0.8);
-
-  await page.locator("#toggle-panel").click();
-  await page.locator("#interaction-fallback").check({ force: true });
-  await page.locator("#toggle-panel").click();
-
-  const beforeDrag = await page.evaluate(() => {
-    return window.__KERR_LENS_VALIDATION__?.getReport();
-  });
-  const bounds = await page.locator("#scene").boundingBox();
-  expect(bounds).not.toBeNull();
-  const x = bounds!.x + bounds!.width * 0.62;
-  const y = bounds!.y + bounds!.height * 0.48;
-  await page.mouse.move(x, y);
-  await page.mouse.down();
-  await page.mouse.move(x + 18, y - 42, { steps: 3 });
-
-  await expect.poll(async () => {
-    return page.evaluate(() => {
-      return window.__KERR_LENS_VALIDATION__?.getReport().drawingBuffer[0];
-    });
-  }).toBeLessThan(beforeDrag!.drawingBuffer[0]);
-  const duringDrag = await page.evaluate(() => {
-    return window.__KERR_LENS_VALIDATION__?.getReport();
-  });
-  await page.mouse.up();
-
-  expect(duringDrag?.interactionFallback).toBe(true);
-  expect(duringDrag?.gpu.kerrLensing.displayed).toBe(true);
-  expect(duringDrag?.gpu.kerrLensing.deferredUpdatesEnabled).toBe(true);
-  await expect.poll(async () => {
-    return page.evaluate(() => {
-      return window.__KERR_LENS_VALIDATION__?.getReport().drawingBuffer[0];
-    });
-  }).toBe(beforeDrag!.drawingBuffer[0]);
   expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
 });
 

@@ -16,13 +16,15 @@ import {
   type FrameStatistics,
 } from "./validation/FrameBenchmark";
 
+type SpacetimeModel = "kerr" | "schwarzschild";
+
 interface ValidationReport {
   readonly version: "2.1.0";
   readonly observer: ObserverState;
   readonly kerr: KerrParameters;
+  readonly spacetimeModel: SpacetimeModel;
   readonly appearance: DiskAppearance;
   readonly quality: QualityMode;
-  readonly interactionFallback: boolean;
   readonly drawingBuffer: readonly [number, number];
   readonly devicePixelRatio: number;
   readonly gpu: ReturnType<BlackHoleRenderer["getDiagnostics"]>;
@@ -90,7 +92,6 @@ const eddingtonRatioInput = element<HTMLInputElement>("eddington-ratio");
 const exposureInput = element<HTMLInputElement>("exposure");
 const appearanceInput = element<HTMLSelectElement>("disk-appearance");
 const qualityInput = element<HTMLSelectElement>("quality");
-const interactionFallbackInput = element<HTMLInputElement>("interaction-fallback");
 const diskInput = element<HTMLInputElement>("disk-enabled");
 const dopplerInput = element<HTMLInputElement>("doppler-enabled");
 const skyInput = element<HTMLInputElement>("sky-enabled");
@@ -106,10 +107,15 @@ const modelReadoutLabel = element<HTMLSpanElement>("model-readout-label");
 const modelReadoutDetail = element<HTMLElement>("model-readout-detail");
 const appearanceNote = element<HTMLParagraphElement>("appearance-note");
 const exposureValue = element<HTMLOutputElement>("exposure-value");
+const modelKerrButton = element<HTMLButtonElement>("model-kerr");
+const modelSchwarzschildButton = element<HTMLButtonElement>("model-schwarzschild");
+const panelTitle = element<HTMLElement>("panel-title");
 const heroEyebrow = element<HTMLParagraphElement>("hero-eyebrow");
 const heroDetail = element<HTMLParagraphElement>("hero-detail");
 const spacetimeStatus = element<HTMLDivElement>("spacetime-status");
+const spacetimeMetricLabel = element<HTMLElement>("spacetime-metric-label");
 const spacetimeStatusTitle = element<HTMLElement>("spacetime-status-title");
+const spacetimeStatusDetail = element<HTMLElement>("spacetime-status-detail");
 const spinNote = element<HTMLParagraphElement>("spin-note");
 const kerrHorizonValue = element<HTMLElement>("kerr-horizon-value");
 const kerrErgosphereValue = element<HTMLElement>("kerr-ergosphere-value");
@@ -127,6 +133,8 @@ const initialDisk = thermalDiskParameters(
   10 ** Number(eddingtonRatioInput.value),
 );
 let activeKerr = kerrParameters(Number(spinInput.value));
+let spacetimeModel: SpacetimeModel = "kerr";
+let savedKerrSpin = activeKerr.spin;
 
 const initialSettings: RendererSettings = {
   spin: activeKerr.spin,
@@ -208,8 +216,6 @@ async function start(): Promise<void> {
     qualityInput.value = "balanced";
     pausedInput.checked = true;
   }
-  governor.setInteractionFallbackEnabled(interactionFallbackInput.checked);
-  blackHole.setInteractionFallbackEnabled(interactionFallbackInput.checked);
   governor.setMode(qualityInput.value as QualityMode);
 
   const frameBenchmark = new FrameBenchmark(90, benchmarkFrameCount);
@@ -226,9 +232,9 @@ async function start(): Promise<void> {
       version: "2.1.0",
       observer: { ...observer },
       kerr: activeKerr,
+      spacetimeModel,
       appearance: appearanceInput.value as DiskAppearance,
       quality: qualityInput.value as QualityMode,
-      interactionFallback: interactionFallbackInput.checked,
       drawingBuffer: [buffer.x, buffer.y],
       devicePixelRatio: window.devicePixelRatio || 1,
       gpu: blackHole.getDiagnostics(),
@@ -302,23 +308,46 @@ async function start(): Promise<void> {
 
   let activeDisk = initialDisk;
 
-  const updateKerrUi = (): void => {
-    activeKerr = kerrParameters(Number(spinInput.value));
+  const updateSpacetimeUi = (): void => {
+    const schwarzschild = spacetimeModel === "schwarzschild";
+    activeKerr = kerrParameters(schwarzschild ? 0 : Number(spinInput.value));
     const spinLabel = formatSpin(activeKerr.spin);
     spinValue.value = spinLabel;
     brandSpin.textContent = `a* ${spinLabel}`;
-    spacetimeStatus.dataset.spinSense = activeKerr.diskSpinSense;
+    panelTitle.textContent = schwarzschild ? "Schwarzschild lensing" : "Kerr lensing";
+    spacetimeMetricLabel.textContent = schwarzschild
+      ? "SCHWARZSCHILD PARAMETERS"
+      : "KERR METRIC PARAMETERS";
+    modelKerrButton.setAttribute("aria-pressed", String(!schwarzschild));
+    modelSchwarzschildButton.setAttribute("aria-pressed", String(schwarzschild));
+    spinInput.disabled = schwarzschild;
+    spinInput.closest(".control")?.classList.toggle("control--disabled", schwarzschild);
+    spacetimeStatus.dataset.spinSense = schwarzschild
+      ? "schwarzschild"
+      : activeKerr.diskSpinSense;
 
-    if (activeKerr.diskSpinSense === "prograde") {
+    if (schwarzschild) {
+      spacetimeStatusTitle.textContent = "EXACT SCHWARZSCHILD LENSING";
+      spacetimeStatusDetail.textContent =
+        "The validated spherical beam-tracing tables run directly with a*=0.";
+      spinNote.textContent =
+        "Non-rotating spacetime · spherical symmetry removes frame dragging.";
+    } else if (activeKerr.diskSpinSense === "prograde") {
       spacetimeStatusTitle.textContent = "PROGRADE KERR LENSING";
+      spacetimeStatusDetail.textContent =
+        "V2.1 traces Carter-separated Kerr rays into a cached finite-observer transfer map.";
       spinNote.textContent =
         "Spin aligned with disk orbit · frame dragging shifts the critical curve with the flow.";
     } else if (activeKerr.diskSpinSense === "retrograde") {
       spacetimeStatusTitle.textContent = "RETROGRADE KERR LENSING";
+      spacetimeStatusDetail.textContent =
+        "V2.1 traces Carter-separated Kerr rays into a cached finite-observer transfer map.";
       spinNote.textContent =
         "Spin opposes disk orbit · the Kerr lens map mirrors its frame-dragging asymmetry.";
     } else {
-      spacetimeStatusTitle.textContent = "EXACT SCHWARZSCHILD LIMIT";
+      spacetimeStatusTitle.textContent = "ZERO-SPIN KERR LIMIT";
+      spacetimeStatusDetail.textContent =
+        "At a*=0 the Kerr metric coincides with the exact Schwarzschild beam-tracing path.";
       spinNote.textContent =
         "Zero spin · Kerr and Schwarzschild parameter sets coincide exactly.";
     }
@@ -335,6 +364,7 @@ async function start(): Promise<void> {
 
   const updateAppearanceUi = (appearance: DiskAppearance): void => {
     const cinematic = appearance === "cinematic";
+    const kerr = spacetimeModel === "kerr";
     massInput.disabled = cinematic;
     eddingtonRatioInput.disabled = cinematic;
     massInput.closest(".control")?.classList.toggle("control--disabled", cinematic);
@@ -345,10 +375,14 @@ async function start(): Promise<void> {
       colorTemperatureValue.value = "4,500 K";
       modelReadoutDetail.textContent = "DNGR-inspired · mild warm grade · marginal depth";
       appearanceNote.textContent =
-        "4500 K source with a mild warm film grade; light follows the active Kerr lens map.";
+        kerr
+          ? "4500 K source with a mild warm film grade; light follows the active Kerr lens map."
+          : "4500 K source with a mild warm film grade; light follows exact Schwarzschild beam tracing.";
       heroEyebrow.textContent = "DNGR-INSPIRED CINEMATIC DISK";
       heroDetail.textContent =
-        "Kerr null geodesics lens a warm, marginally opaque 4500\u00a0K presentation disk.";
+        kerr
+          ? "Kerr null geodesics lens a warm, marginally opaque 4500\u00a0K presentation disk."
+          : "Schwarzschild null geodesics lens a warm, marginally opaque 4500\u00a0K presentation disk.";
     } else {
       modelReadoutLabel.textContent = "DERIVED COLOR PEAK · fcol 1.7";
       colorTemperatureValue.value = formatTemperature(activeDisk.peakColorTemperatureK);
@@ -359,7 +393,9 @@ async function start(): Promise<void> {
         "Page–Thorne flux, diluted blackbody spectrum, and an optically thick surface.";
       heroEyebrow.textContent = "PAGE–THORNE THERMAL DISK";
       heroDetail.textContent =
-        "Kerr null geodesics bend the image; mass and accretion rate set the disk spectrum.";
+        kerr
+          ? "Kerr null geodesics bend the image; mass and accretion rate set the disk spectrum."
+          : "Schwarzschild null geodesics bend the image; mass and accretion rate set the disk spectrum.";
     }
   };
 
@@ -377,29 +413,44 @@ async function start(): Promise<void> {
     updateAppearanceUi(appearanceInput.value as DiskAppearance);
   };
 
+  const selectSpacetimeModel = (next: SpacetimeModel): void => {
+    if (next === spacetimeModel) return;
+    if (next === "schwarzschild") {
+      savedKerrSpin = Number(spinInput.value);
+      spinInput.value = "0";
+    } else {
+      spinInput.value = String(savedKerrSpin);
+    }
+    spacetimeModel = next;
+    updateSpacetimeUi();
+    updateAppearanceUi(appearanceInput.value as DiskAppearance);
+    blackHole.updateSettings({ spin: activeKerr.spin });
+  };
+
   const controller = new ObserverController(canvas, observer, {
     onChange: (next) => {
       observer = next;
       updateObserverUi(next);
       blackHole.updateObserver(next);
     },
-    onInteraction: () => governor.markInteraction(),
     onFirstInteraction: () => gestureHint.classList.add("gesture-hint--hidden"),
   });
 
   inclinationInput.addEventListener("input", () => {
     controller.setState({ inclination: (Number(inclinationInput.value) * Math.PI) / 180 });
-    governor.markInteraction();
   });
   spinInput.addEventListener("input", () => {
-    updateKerrUi();
+    savedKerrSpin = Number(spinInput.value);
+    updateSpacetimeUi();
     blackHole.updateSettings({ spin: activeKerr.spin });
-    governor.markInteraction(120);
   });
   distanceInput.addEventListener("input", () => {
     controller.setState({ radius: Number(distanceInput.value) });
-    governor.markInteraction();
   });
+  modelKerrButton.addEventListener("click", () => selectSpacetimeModel("kerr"));
+  modelSchwarzschildButton.addEventListener("click", () =>
+    selectSpacetimeModel("schwarzschild"),
+  );
   massInput.addEventListener("input", updateDiskModel);
   eddingtonRatioInput.addEventListener("input", updateDiskModel);
   exposureInput.addEventListener("input", () => {
@@ -416,15 +467,9 @@ async function start(): Promise<void> {
       dopplerEnabled: dopplerInput.checked,
     });
     updateAppearanceUi(diskAppearance);
-    governor.markInteraction(350);
   });
   qualityInput.addEventListener("change", () => {
     governor.setMode(qualityInput.value as QualityMode);
-    applySize();
-  });
-  interactionFallbackInput.addEventListener("change", () => {
-    governor.setInteractionFallbackEnabled(interactionFallbackInput.checked);
-    blackHole.setInteractionFallbackEnabled(interactionFallbackInput.checked);
     applySize();
   });
   diskInput.addEventListener("change", () => blackHole.updateSettings({ diskEnabled: diskInput.checked }));
@@ -434,7 +479,6 @@ async function start(): Promise<void> {
 
   element<HTMLButtonElement>("reset-view").addEventListener("click", () => {
     controller.setState(DEFAULT_OBSERVER);
-    governor.markInteraction(350);
   });
 
   window.addEventListener("resize", () => applySize());
@@ -443,7 +487,7 @@ async function start(): Promise<void> {
   });
 
   updateObserverUi(observer);
-  updateKerrUi();
+  updateSpacetimeUi();
   updateDiskModel();
   exposureValue.value = initialSettings.exposure.toFixed(2);
   applySize();

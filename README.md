@@ -54,6 +54,7 @@ p95, and p99 frame intervals with GPU and drawing-buffer metadata. Use
 
 - Drag to orbit the observer while keeping the black hole centered.
 - Scroll to change the observer radius.
+- Select Kerr or Schwarzschild spacetime explicitly. Schwarzschild fixes `a* = 0`; returning to Kerr restores the previous signed spin.
 - Vary signed Kerr spin `a*` from `-0.998` (retrograde relative to the disk) to `+0.998` (prograde).
 - Inspect spin-derived horizon, ergosphere, photon-orbit, ISCO, efficiency, and horizon-angular-velocity values while the same signed spin drives the V2.1 lens map.
 - Switch between the default cinematic presentation and the scientific Page–Thorne disk.
@@ -61,7 +62,6 @@ p95, and p99 frame intervals with GPU and drawing-buffer metadata. Use
 - Peak effective and color temperatures are derived outputs, not artistic temperature controls.
 - Toggle the disk, relativistic frequency shift, background sky, and animation. The cinematic preset disables frequency shift by default, matching the final film presentation; the scientific preset enables it.
 - Select adaptive, performance, balanced, or high-fidelity render resolution; high fidelity is the default.
-- Optionally enable Interaction fallback to cap drag resolution and defer Kerr-map rebuilds. It is off by default, so interaction never silently changes quality or lens geometry.
 
 Mass and Eddington ratio are logarithmic controls spanning `10⁷–10¹⁰ M☉` and `0.01–0.316 L_Edd`. Distances use the Schwarzschild radius, `r_s = 2GM/c²`, as the unit. The V2.0 Kerr anchors are:
 
@@ -79,7 +79,7 @@ Mass and Eddington ratio are logarithmic controls spanning `10⁷–10¹⁰ M☉
 - The radial Page–Thorne temperature calculation is precomputed once into a 1 KiB `R32F` profile.
 - Both materials share two small, mipmapped noise samples per visible disk hit. Broad and fine turbulence are packed into separate texture channels, so two finite-age fields can be blended continuously without increasing the V2.0 sample count. There is no particle loop, extra pass, or extra draw call.
 - High-performance WebGL context and no MSAA.
-- Optional Interaction fallback temporarily caps drag resolution at 64% and waits 55 ms before rebuilding the Kerr map; it is disabled by default.
+- Dragging never changes the selected quality or lens model; an invalidated Kerr map is rebuilt synchronously before the next displayed frame.
 - Adaptive mode targets 60 fps using an exponential moving average of frame time.
 - Device pixel ratio is capped to avoid accidental 4K-class rendering on dense displays.
 - A 2048×1024 Milky Way panorama is loaded once and sampled as a mipmapped texture (284 KiB compressed).
@@ -94,7 +94,7 @@ See [docs/kerr.md](docs/kerr.md) for the V2.0 equations, sign convention, and re
 V1 is a physically grounded renderer of a specific model, not a prediction of one named astronomical object. Its two appearance modes are intentionally labelled because they answer different questions.
 
 - **Scientific · NT** uses the Page–Thorne temperature profile, color hardening, relativistic frequency shift, and an optically thick photosphere.
-- **Cinematic · DNGR** keeps the same Schwarzschild geodesics but uses an art-directed 4500 K, marginal-optical-depth surface, an 85° default view, stronger procedural structure, a mild luminance-neutral warm film grade, and no frequency shift by default. It is inspired by the documented production choices for *Interstellar* and is not presented as an accretion-flow prediction.
+- **Cinematic · DNGR** keeps the selected Kerr or Schwarzschild geodesics but uses an art-directed 4500 K, marginal-optical-depth surface, an 85° default view, stronger procedural structure, a mild luminance-neutral warm film grade, and no frequency shift by default. It is inspired by the documented production choices for *Interstellar* and is not presented as an accretion-flow prediction.
 
 - At exactly zero spin, light propagation follows the original Schwarzschild null geodesics up to lookup-table interpolation error.
 - At non-zero spin, light propagation uses numerically integrated Carter-separated Kerr null geodesics. The finite transfer-map resolution and fixed integration budget are explicit approximation limits; a separately evaluated finite-observer Kerr critical curve keeps the shadow boundary sharp.

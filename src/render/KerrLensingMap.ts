@@ -29,7 +29,6 @@ import type { ObserverState } from "./ObserverController";
 
 const FOV_Y = (48 * Math.PI) / 180;
 const SHADOW_PROFILE_SIZE = 512;
-const UPDATE_SETTLE_MS = 55;
 const AXIS_REPAIR_WIDTH = 6;
 export const KERR_SPIN_THRESHOLD = 0.0015;
 
@@ -48,7 +47,6 @@ export interface KerrLensingMapState {
   readonly shadowCenterX: number;
   readonly shadowCenterY: number;
   readonly rebuildCount: number;
-  readonly deferredUpdatesEnabled: boolean;
 }
 
 interface RequestedMap {
@@ -75,8 +73,6 @@ export class KerrLensingMap {
   private readonly longEdge: number;
   private requested: RequestedMap = { spin: 0, radius: 26, inclination: Math.PI / 2 };
   private dirty = false;
-  private dirtySince = 0;
-  private deferredUpdatesEnabled = false;
   private state: KerrLensingMapState = {
     ready: false,
     spin: 0,
@@ -87,7 +83,6 @@ export class KerrLensingMap {
     shadowCenterX: 0,
     shadowCenterY: 0,
     rebuildCount: 0,
-    deferredUpdatesEnabled: false,
   };
 
   constructor(renderer: WebGLRenderer, softwareRenderer: boolean) {
@@ -204,7 +199,6 @@ export class KerrLensingMap {
     this.axisRepairDestination.set(width / 2 - AXIS_REPAIR_WIDTH / 2, 0);
     this.state = { ...this.state, width, height, ready: false };
     this.dirty = true;
-    this.dirtySince = performance.now();
     return true;
   }
 
@@ -220,7 +214,6 @@ export class KerrLensingMap {
       inclination: observer.inclination,
     };
     this.dirty = true;
-    this.dirtySince = performance.now();
     return true;
   }
 
@@ -229,21 +222,8 @@ export class KerrLensingMap {
     await renderer.compileAsync(this.axisRepairScene, this.camera);
   }
 
-  setDeferredUpdatesEnabled(enabled: boolean): void {
-    this.deferredUpdatesEnabled = enabled;
-    this.state = { ...this.state, deferredUpdatesEnabled: enabled };
-  }
-
-  renderIfNeeded(renderer: WebGLRenderer, force = false): boolean {
+  renderIfNeeded(renderer: WebGLRenderer): boolean {
     if (!this.dirty) return false;
-    if (
-      !force &&
-      this.deferredUpdatesEnabled &&
-      this.state.ready &&
-      performance.now() - this.dirtySince < UPDATE_SETTLE_MS
-    ) {
-      return false;
-    }
 
     const { spin, radius, inclination } = this.requested;
     if (Math.abs(spin) < KERR_SPIN_THRESHOLD) {
@@ -295,7 +275,6 @@ export class KerrLensingMap {
       shadowCenterX: shadow.centerX,
       shadowCenterY: shadow.centerY,
       rebuildCount: this.state.rebuildCount + 1,
-      deferredUpdatesEnabled: this.deferredUpdatesEnabled,
     };
     this.dirty = false;
     return true;

@@ -162,7 +162,7 @@ export class BlackHoleRenderer {
   async warmup(): Promise<void> {
     await this.renderer.compileAsync(this.scene, this.camera);
     await this.kerrLensingMap.compile(this.renderer);
-    if (this.kerrLensingMap.renderIfNeeded(this.renderer, true)) this.syncKerrMap();
+    if (this.kerrLensingMap.renderIfNeeded(this.renderer)) this.syncKerrMap();
   }
 
   updateObserver(state: ObserverState): void {
@@ -179,9 +179,9 @@ export class BlackHoleRenderer {
     (this.material.uniforms.uCameraRightAxis?.value as Vector3).fromArray(observer.rightAxis);
     (this.material.uniforms.uCameraUpAxis?.value as Vector3).fromArray(observer.upAxis);
     (this.material.uniforms.uCameraOutwardAxis?.value as Vector3).fromArray(observer.outwardAxis);
-    // A parameter change only dirties the back-end transfer map. Keep the last
-    // complete Kerr map on screen until its replacement is ready; dropping to
-    // Schwarzschild during the settle window changes the apparent shadow size.
+    // A parameter change dirties the back-end transfer map. It is rebuilt
+    // synchronously before the next displayed frame, so interaction never
+    // changes resolution or substitutes the Schwarzschild lens path.
     this.kerrLensingMap.request(this.settings.spin, state);
   }
 
@@ -211,10 +211,6 @@ export class BlackHoleRenderer {
     if (settings.diskEnabled !== undefined) this.material.uniforms.uDiskEnabled!.value = settings.diskEnabled ? 1 : 0;
     if (settings.dopplerEnabled !== undefined) this.material.uniforms.uDopplerEnabled!.value = settings.dopplerEnabled ? 1 : 0;
     if (settings.skyEnabled !== undefined) this.material.uniforms.uSkyEnabled!.value = settings.skyEnabled ? 1 : 0;
-  }
-
-  setInteractionFallbackEnabled(enabled: boolean): void {
-    this.kerrLensingMap.setDeferredUpdatesEnabled(enabled);
   }
 
   resize(cssWidth: number, cssHeight: number, pixelRatio: number): void {
