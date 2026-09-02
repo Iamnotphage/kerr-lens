@@ -139,6 +139,41 @@ test("renders distinct positive and negative Kerr lens maps", async ({ page }, t
   expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
 });
 
+test("keeps the Kerr transfer map on screen while a drag update settles", async ({
+  page,
+}) => {
+  const runtimeErrors = watchRuntimeErrors(page);
+  await page.goto("/");
+  await waitForRenderer(page);
+  await waitForKerrMap(page, 0.8);
+
+  const canvas = page.locator("#scene");
+  const bounds = await canvas.boundingBox();
+  expect(bounds).not.toBeNull();
+  const startX = bounds!.x + bounds!.width * 0.62;
+  const startY = bounds!.y + bounds!.height * 0.48;
+
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(startX + 18, startY - 42, { steps: 3 });
+
+  const duringDrag = await page.evaluate(() => {
+    return window.__KERR_LENS_VALIDATION__?.getReport();
+  });
+  await page.mouse.up();
+
+  expect(duringDrag?.observer.inclination).not.toBeCloseTo((85 * Math.PI) / 180, 4);
+  expect(duringDrag?.gpu.kerrLensing.ready).toBe(true);
+  expect(duringDrag?.gpu.kerrLensing.displayed).toBe(true);
+  await expect.poll(async () => {
+    const report = await page.evaluate(() => {
+      return window.__KERR_LENS_VALIDATION__?.getReport();
+    });
+    return report?.gpu.kerrLensing.observerInclination;
+  }).toBeCloseTo(duringDrag!.observer.inclination, 4);
+  expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
+});
+
 test("keeps finite-coherence disk structure after long simulation times", async ({
   page,
 }, testInfo) => {

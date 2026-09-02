@@ -68,6 +68,8 @@ uniform int uDopplerEnabled;
 uniform int uSkyEnabled;
 uniform int uKerrMapReady;
 uniform float uKerrSpin;
+uniform float uKerrObserverRadiusRs;
+uniform float uKerrObserverInclination;
 uniform vec2 uKerrShadowCenter;
 
 const float PI = 3.14159265358979323846;
@@ -493,9 +495,9 @@ vec4 sampleKerrTransfer(sampler2D transferMap, vec2 uv) {
 float kerrScreenLambda(vec2 screen) {
   float focalLength = 1.0 / tan(uFovY * 0.5);
   vec3 backwardDirection = normalize(vec3(screen, -focalLength));
-  float radius = 2.0 * uCameraCoordinates.y;
-  float cosineTheta = cos(uCameraCoordinates.z);
-  float sineTheta = sin(uCameraCoordinates.z);
+  float radius = 2.0 * uKerrObserverRadiusRs;
+  float cosineTheta = cos(uKerrObserverInclination);
+  float sineTheta = sin(uKerrObserverInclination);
   float spinSquared = uKerrSpin * uKerrSpin;
   float sigma = radius * radius + spinSquared * cosineTheta * cosineTheta;
   float delta = radius * radius - 2.0 * radius + spinSquared;
@@ -513,9 +515,9 @@ float kerrScreenLambda(vec2 screen) {
  * the complete Kerr circular four-velocity and spin-dependent disk edge.
  */
 float v21FrequencyShift(float radiusRs, float lambda) {
-  float observerRadiusM = 2.0 * uCameraCoordinates.y;
-  float cosineTheta = cos(uCameraCoordinates.z);
-  float sineTheta = sin(uCameraCoordinates.z);
+  float observerRadiusM = 2.0 * uKerrObserverRadiusRs;
+  float cosineTheta = cos(uKerrObserverInclination);
+  float sineTheta = sin(uKerrObserverInclination);
   float spinSquared = uKerrSpin * uKerrSpin;
   float sigma = observerRadiusM * observerRadiusM +
     spinSquared * cosineTheta * cosineTheta;
