@@ -238,9 +238,10 @@ vec3 skyColor(vec3 direction) {
   vec2 uv = skyUv(direction);
   vec3 color = texture(uSkyTexture, uv).rgb;
   // The photographic panorama is periodic in longitude but its source edges
-  // are not pixel-identical. Blend a narrow strip in spherical coordinates so
-  // strong lensing cannot magnify that asset boundary into a screen-space cut.
-  const float seamWidth = 0.018;
+  // are not pixel-identical. Bridge only the two source texels adjacent to the
+  // wrap. The previous 37-texel half-width became a broad nested ribbon when
+  // the Kerr map produced several high-order images of the same sky strip.
+  const float seamWidth = 2.0 / 2048.0;
   float signedSeam = uv.x < 0.5 ? uv.x : uv.x - 1.0;
   if (abs(signedSeam) < seamWidth) {
     vec3 leftEdge = texture(uSkyTexture, vec2(1.0 - seamWidth, uv.y)).rgb;
