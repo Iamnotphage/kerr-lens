@@ -194,11 +194,14 @@ linger near the photon region beyond the fixed step budget cannot turn into a fa
 black halo outside the exact curve.
 
 The transfer map stores this Cartesian sky direction and Cartesian disk-plane hits, so
-the display shader samples every attachment exactly once. A finite grid still undersamples
-the high-magnification `lambda = 0` family: when the map is rebuilt, a six-column offscreen
-strip reconstructs that coordinate footprint and is copied back into the three attachments.
-This is not a per-frame screen warp. Thin-disk caustics elsewhere retain their native map
-resolution, and the steady renderer remains one draw call over one full-screen triangle.
+the display shader samples every attachment exactly once. Physical GPUs size the map from
+the selected drawing buffer, using a bounded `512–1024`-pixel long edge; software WebGL
+validation retains a 224-pixel map. Even map dimensions place the measure-zero
+`lambda = 0` ray between texel centers. The display sampler bridges only that ordinary
+one-texel interval instead of widening it into the former six-column crossfade, which could
+mix separate high-order ray families into a false vertical ribbon in close views. Thin-disk
+caustics elsewhere retain their native map resolution, and the steady renderer remains one
+draw call over one full-screen triangle.
 
 ## Exact critical curve
 
