@@ -60,7 +60,8 @@ p95, and p99 frame intervals with GPU and drawing-buffer metadata. Use
 - Adjust inclination, distance, black-hole mass, Eddington luminosity ratio, and display exposure.
 - Peak effective and color temperatures are derived outputs, not artistic temperature controls.
 - Toggle the disk, relativistic frequency shift, background sky, and animation. The cinematic preset disables frequency shift by default, matching the final film presentation; the scientific preset enables it.
-- Select adaptive, performance, balanced, or high-fidelity render resolution.
+- Select adaptive, performance, balanced, or high-fidelity render resolution; high fidelity is the default.
+- Optionally enable Interaction fallback to cap drag resolution and defer Kerr-map rebuilds. It is off by default, so interaction never silently changes quality or lens geometry.
 
 Mass and Eddington ratio are logarithmic controls spanning `10⁷–10¹⁰ M☉` and `0.01–0.316 L_Edd`. Distances use the Schwarzschild radius, `r_s = 2GM/c²`, as the unit. The V2.0 Kerr anchors are:
 
@@ -74,11 +75,11 @@ Mass and Eddington ratio are logarithmic controls spanning `10⁷–10¹⁰ M☉
 
 - One oversized full-screen triangle; no scene meshes or depth buffer.
 - Constant-time steady-state shading through either the Schwarzschild tables or cached Kerr transfer map.
-- One display pass and draw call in steady state; a parameter change schedules one offscreen MRT map update.
+- One display pass and draw call in steady state; by default a parameter change performs its offscreen MRT map update on the next displayed frame.
 - The radial Page–Thorne temperature calculation is precomputed once into a 1 KiB `R32F` profile.
 - Both materials share two small, mipmapped noise samples per visible disk hit. Broad and fine turbulence are packed into separate texture channels, so two finite-age fields can be blended continuously without increasing the V2.0 sample count. There is no particle loop, extra pass, or extra draw call.
 - High-performance WebGL context and no MSAA.
-- Render resolution drops temporarily during interaction.
+- Optional Interaction fallback temporarily caps drag resolution at 64% and waits 55 ms before rebuilding the Kerr map; it is disabled by default.
 - Adaptive mode targets 60 fps using an exponential moving average of frame time.
 - Device pixel ratio is capped to avoid accidental 4K-class rendering on dense displays.
 - A 2048×1024 Milky Way panorama is loaded once and sampled as a mipmapped texture (284 KiB compressed).

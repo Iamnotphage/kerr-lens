@@ -20,6 +20,7 @@ export class PerformanceGovernor {
   private samples = 0;
   private lastAdjustment = 0;
   private interactiveUntil = 0;
+  private interactionFallbackEnabled = false;
 
   setMode(mode: QualityMode): void {
     this.mode = mode;
@@ -27,7 +28,14 @@ export class PerformanceGovernor {
     this.recomputeScale(performance.now());
   }
 
+  setInteractionFallbackEnabled(enabled: boolean): void {
+    this.interactionFallbackEnabled = enabled;
+    if (!enabled) this.interactiveUntil = 0;
+    this.recomputeScale(performance.now());
+  }
+
   markInteraction(durationMs = 180): void {
+    if (!this.interactionFallbackEnabled) return;
     this.interactiveUntil = performance.now() + durationMs;
   }
 
@@ -56,6 +64,8 @@ export class PerformanceGovernor {
 
   private recomputeScale(now: number): void {
     const requested = this.mode === "auto" ? this.adaptiveScale : FIXED_SCALE[this.mode];
-    this.effectiveScale = now < this.interactiveUntil ? Math.min(requested, 0.64) : requested;
+    this.effectiveScale = this.interactionFallbackEnabled && now < this.interactiveUntil
+      ? Math.min(requested, 0.64)
+      : requested;
   }
 }

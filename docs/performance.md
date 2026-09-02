@@ -4,7 +4,7 @@ Kerr Lens treats frame time as a feature, not a cleanup task.
 
 ## Steady-state render budget
 
-The default target is 60 frames per second on an integrated laptop GPU at a balanced internal resolution. A frame should remain within approximately 16.7 ms after shader warm-up. Device, browser, thermal state, and display resolution must accompany every reported result.
+The application defaults to high-fidelity resolution and does not silently reduce quality during interaction. The controlled benchmark uses a balanced internal resolution and targets 60 frames per second on an integrated laptop GPU. A steady-state benchmark frame should remain within approximately 16.7 ms after shader warm-up. Device, browser, thermal state, and display resolution must accompany every reported result.
 
 The render path is deliberately bounded:
 
@@ -29,7 +29,7 @@ Adaptive mode maintains an exponential moving average of frame time.
 - Above 18.5 ms, internal resolution decreases in 8% steps.
 - Below 14.2 ms, it increases in 4% steps.
 - The permitted scale is 52–100% of the capped device resolution.
-- During drag/zoom interaction, scale is temporarily capped at 64%.
+- The optional Interaction fallback caps drag/zoom scale at 64%; it is disabled by default.
 - Device pixel ratio is capped at 1.5 before applying the scale.
 
 This changes sampling density, not the physical model.
@@ -105,10 +105,12 @@ the interpolated Cartesian radius, instead of magnifying a low-resolution hit/no
 The photographic sky's non-identical longitude endpoints are likewise crossfaded over a
 narrow spherical strip so lensing cannot turn an asset seam into a screen-space cut.
 
-Changing spin, inclination, observer radius, or viewport aspect invalidates the map. The
-renderer waits 55 ms for a stream of input events to settle, performs one offscreen MRT
-draw with a fixed 224-step Carter integrator plus the six-column repair pass, then returns
-to the steady-state contract:
+Changing spin, inclination, observer radius, or viewport aspect invalidates the map. By
+default, the renderer performs one offscreen MRT draw with a fixed 224-step Carter
+integrator plus the six-column repair pass on the next displayed frame. This may stall an
+interaction frame, but never substitutes a lower-fidelity lens path. Users may explicitly
+enable Interaction fallback to retain the last complete map and wait 55 ms for input to
+settle before rebuilding. After either path, rendering returns to the steady-state contract:
 
 - one display draw call and one full-screen triangle;
 - three transfer samples plus one one-dimensional shadow sample at every pixel;

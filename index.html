@@ -102,14 +102,15 @@
           <div class="control control--select">
             <label for="quality">Render quality</label>
             <select id="quality">
-              <option value="auto" selected>Adaptive · 60 fps</option>
+              <option value="auto">Adaptive · 60 fps</option>
               <option value="performance">Performance</option>
               <option value="balanced">Balanced</option>
-              <option value="high">High fidelity</option>
+              <option value="high" selected>High fidelity</option>
             </select>
           </div>
 
           <div class="switches">
+            <label class="switch" title="Optionally lower resolution and defer Kerr map rebuilds while interacting"><span>Interaction fallback</span><input id="interaction-fallback" type="checkbox" /><i></i></label>
             <label class="switch"><span>Thermal disk</span><input id="disk-enabled" type="checkbox" checked /><i></i></label>
             <label class="switch"><span>Relativistic shift</span><input id="doppler-enabled" type="checkbox" /><i></i></label>
             <label class="switch"><span>Background sky</span><input id="sky-enabled" type="checkbox" checked /><i></i></label>

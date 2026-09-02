@@ -48,6 +48,7 @@ export interface KerrLensingMapState {
   readonly shadowCenterX: number;
   readonly shadowCenterY: number;
   readonly rebuildCount: number;
+  readonly deferredUpdatesEnabled: boolean;
 }
 
 interface RequestedMap {
@@ -75,6 +76,7 @@ export class KerrLensingMap {
   private requested: RequestedMap = { spin: 0, radius: 26, inclination: Math.PI / 2 };
   private dirty = false;
   private dirtySince = 0;
+  private deferredUpdatesEnabled = false;
   private state: KerrLensingMapState = {
     ready: false,
     spin: 0,
@@ -85,6 +87,7 @@ export class KerrLensingMap {
     shadowCenterX: 0,
     shadowCenterY: 0,
     rebuildCount: 0,
+    deferredUpdatesEnabled: false,
   };
 
   constructor(renderer: WebGLRenderer, softwareRenderer: boolean) {
@@ -226,9 +229,19 @@ export class KerrLensingMap {
     await renderer.compileAsync(this.axisRepairScene, this.camera);
   }
 
+  setDeferredUpdatesEnabled(enabled: boolean): void {
+    this.deferredUpdatesEnabled = enabled;
+    this.state = { ...this.state, deferredUpdatesEnabled: enabled };
+  }
+
   renderIfNeeded(renderer: WebGLRenderer, force = false): boolean {
     if (!this.dirty) return false;
-    if (!force && this.state.ready && performance.now() - this.dirtySince < UPDATE_SETTLE_MS) {
+    if (
+      !force &&
+      this.deferredUpdatesEnabled &&
+      this.state.ready &&
+      performance.now() - this.dirtySince < UPDATE_SETTLE_MS
+    ) {
       return false;
     }
 
@@ -282,6 +295,7 @@ export class KerrLensingMap {
       shadowCenterX: shadow.centerX,
       shadowCenterY: shadow.centerY,
       rebuildCount: this.state.rebuildCount + 1,
+      deferredUpdatesEnabled: this.deferredUpdatesEnabled,
     };
     this.dirty = false;
     return true;

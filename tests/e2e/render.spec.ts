@@ -43,6 +43,8 @@ test("compiles the WebGL renderer and draws an interactive frame", async ({ page
   await page.locator("#toggle-panel").click();
   await expect(page.locator("#toggle-panel")).toHaveAttribute("aria-expanded", "true");
   await expect(page.locator("#disk-appearance")).toHaveValue("cinematic");
+  await expect(page.locator("#quality")).toHaveValue("high");
+  await expect(page.locator("#interaction-fallback")).not.toBeChecked();
   await expect(page.locator("#spin-value")).toHaveText("+0.800");
   await expect(page.locator("#spacetime-status-title")).toHaveText("PROGRADE KERR LENSING");
   await expect(page.locator("#kerr-horizon-value")).toHaveText("0.800 rₛ");
@@ -139,13 +141,17 @@ test("renders distinct positive and negative Kerr lens maps", async ({ page }, t
   expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
 });
 
-test("keeps the Kerr transfer map on screen while a drag update settles", async ({
+test("keeps full-quality Kerr rendering active during drag by default", async ({
   page,
 }) => {
   const runtimeErrors = watchRuntimeErrors(page);
   await page.goto("/");
   await waitForRenderer(page);
   await waitForKerrMap(page, 0.8);
+
+  const beforeDrag = await page.evaluate(() => {
+    return window.__KERR_LENS_VALIDATION__?.getReport();
+  });
 
   const canvas = page.locator("#scene");
   const bounds = await canvas.boundingBox();
@@ -163,14 +169,59 @@ test("keeps the Kerr transfer map on screen while a drag update settles", async 
   await page.mouse.up();
 
   expect(duringDrag?.observer.inclination).not.toBeCloseTo((85 * Math.PI) / 180, 4);
+  expect(duringDrag?.interactionFallback).toBe(false);
+  expect(duringDrag?.drawingBuffer).toEqual(beforeDrag?.drawingBuffer);
   expect(duringDrag?.gpu.kerrLensing.ready).toBe(true);
   expect(duringDrag?.gpu.kerrLensing.displayed).toBe(true);
+  expect(duringDrag?.gpu.kerrLensing.deferredUpdatesEnabled).toBe(false);
   await expect.poll(async () => {
     const report = await page.evaluate(() => {
       return window.__KERR_LENS_VALIDATION__?.getReport();
     });
     return report?.gpu.kerrLensing.observerInclination;
   }).toBeCloseTo(duringDrag!.observer.inclination, 4);
+  expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
+});
+
+test("only enables interaction degradation after explicit opt-in", async ({ page }) => {
+  const runtimeErrors = watchRuntimeErrors(page);
+  await page.goto("/");
+  await waitForRenderer(page);
+  await waitForKerrMap(page, 0.8);
+
+  await page.locator("#toggle-panel").click();
+  await page.locator("#interaction-fallback").check({ force: true });
+  await page.locator("#toggle-panel").click();
+
+  const beforeDrag = await page.evaluate(() => {
+    return window.__KERR_LENS_VALIDATION__?.getReport();
+  });
+  const bounds = await page.locator("#scene").boundingBox();
+  expect(bounds).not.toBeNull();
+  const x = bounds!.x + bounds!.width * 0.62;
+  const y = bounds!.y + bounds!.height * 0.48;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 18, y - 42, { steps: 3 });
+
+  await expect.poll(async () => {
+    return page.evaluate(() => {
+      return window.__KERR_LENS_VALIDATION__?.getReport().drawingBuffer[0];
+    });
+  }).toBeLessThan(beforeDrag!.drawingBuffer[0]);
+  const duringDrag = await page.evaluate(() => {
+    return window.__KERR_LENS_VALIDATION__?.getReport();
+  });
+  await page.mouse.up();
+
+  expect(duringDrag?.interactionFallback).toBe(true);
+  expect(duringDrag?.gpu.kerrLensing.displayed).toBe(true);
+  expect(duringDrag?.gpu.kerrLensing.deferredUpdatesEnabled).toBe(true);
+  await expect.poll(async () => {
+    return page.evaluate(() => {
+      return window.__KERR_LENS_VALIDATION__?.getReport().drawingBuffer[0];
+    });
+  }).toBe(beforeDrag!.drawingBuffer[0]);
   expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
 });
 

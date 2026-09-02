@@ -213,6 +213,10 @@ export class BlackHoleRenderer {
     if (settings.skyEnabled !== undefined) this.material.uniforms.uSkyEnabled!.value = settings.skyEnabled ? 1 : 0;
   }
 
+  setInteractionFallbackEnabled(enabled: boolean): void {
+    this.kerrLensingMap.setDeferredUpdatesEnabled(enabled);
+  }
+
   resize(cssWidth: number, cssHeight: number, pixelRatio: number): void {
     this.renderer.setPixelRatio(pixelRatio);
     this.renderer.setSize(Math.max(cssWidth, 1), Math.max(cssHeight, 1), false);
