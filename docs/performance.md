@@ -105,7 +105,10 @@ Equatorial crossings are retained through a `2.25–14 r_s` guard band around th
 the interpolated Cartesian radius, instead of magnifying a low-resolution hit/no-hit edge.
 The photographic sky's non-identical longitude endpoints are likewise crossfaded over a
 four-source-texel spherical strip. This bridges the asset boundary without turning the
-former 74-texel repair band into several broad higher-order images.
+former 74-texel repair band into several broad higher-order images. Longitude derivatives
+are reduced to their shortest periodic displacement before explicit mip selection, so the
+`1 → 0` wrap cannot masquerade as a full-panorama pixel footprint. `textureGrad` replaces
+the original panorama lookup rather than adding another steady-state sample.
 
 Changing spin, inclination, observer radius, or viewport aspect invalidates the map. By
 default, the renderer performs one offscreen MRT draw with a fixed 224-step Carter
