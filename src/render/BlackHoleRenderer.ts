@@ -234,7 +234,7 @@ export class BlackHoleRenderer {
     this.renderer.setPixelRatio(pixelRatio);
     this.renderer.setSize(Math.max(cssWidth, 1), Math.max(cssHeight, 1), false);
     this.renderer.getDrawingBufferSize(this.resolution);
-    if (this.kerrLensingMap.resize(cssWidth, cssHeight)) {
+    if (this.kerrLensingMap.resize(this.resolution.x, this.resolution.y)) {
       this.material.uniforms.uKerrMapReady!.value = 0;
     }
   }
