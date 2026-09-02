@@ -19,7 +19,7 @@ import {
 type SpacetimeModel = "kerr" | "schwarzschild";
 
 interface ValidationReport {
-  readonly version: "2.1.0";
+  readonly version: "2.1.1";
   readonly observer: ObserverState;
   readonly kerr: KerrParameters;
   readonly spacetimeModel: SpacetimeModel;
@@ -229,7 +229,7 @@ async function start(): Promise<void> {
   const validationReport = (): ValidationReport => {
     const buffer = blackHole.getDrawingBufferSize();
     return {
-      version: "2.1.0",
+      version: "2.1.1",
       observer: { ...observer },
       kerr: activeKerr,
       spacetimeModel,

@@ -91,6 +91,11 @@ validation report exports the active map spin, resolution, readiness, and rebuil
 Zero spin deliberately disables the Kerr map and exercises the original Schwarzschild
 shader path, preventing numerical near-zero integration from weakening that regression.
 
+V2.1.1 additionally captures `a* = +0.8`, `85°`, and the closest `7 r_s` observer at a
+`1600×1200` viewport. This deliberately magnifies the transfer map and its optical axis;
+the artifact exposes any reintroduction of a broad axial repair ribbon or wide photographic
+longitude crossfade that default-distance thumbnails can conceal.
+
 Run all local non-browser gates with:
 
 ```bash

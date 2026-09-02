@@ -236,15 +236,35 @@ vec2 skyUv(vec3 direction) {
 vec3 skyColor(vec3 direction) {
   if (uSkyEnabled == 0) return vec3(0.001, 0.002, 0.005);
   vec2 uv = skyUv(direction);
-  vec3 color = texture(uSkyTexture, uv).rgb;
+  // atan() wraps longitude from 1 back to 0. Implicit texture derivatives see
+  // that periodic boundary as an almost full-texture jump and select a very
+  // coarse mip, which strong lensing repeats as dark bars and broad contours.
+  // Supply the equivalent shortest periodic derivative explicitly. This keeps
+  // the ray footprint intact without adding another panorama lookup.
+  vec2 skyDx = dFdx(uv);
+  vec2 skyDy = dFdy(uv);
+  skyDx.x -= round(skyDx.x);
+  skyDy.x -= round(skyDy.x);
+  vec3 color = textureGrad(uSkyTexture, uv, skyDx, skyDy).rgb;
   // The photographic panorama is periodic in longitude but its source edges
-  // are not pixel-identical. Blend a narrow strip in spherical coordinates so
-  // strong lensing cannot magnify that asset boundary into a screen-space cut.
-  const float seamWidth = 0.018;
+  // are not pixel-identical. Bridge only the two source texels adjacent to the
+  // wrap. The previous 37-texel half-width became a broad nested ribbon when
+  // the Kerr map produced several high-order images of the same sky strip.
+  const float seamWidth = 2.0 / 2048.0;
   float signedSeam = uv.x < 0.5 ? uv.x : uv.x - 1.0;
   if (abs(signedSeam) < seamWidth) {
-    vec3 leftEdge = texture(uSkyTexture, vec2(1.0 - seamWidth, uv.y)).rgb;
-    vec3 rightEdge = texture(uSkyTexture, vec2(seamWidth, uv.y)).rgb;
+    vec3 leftEdge = textureGrad(
+      uSkyTexture,
+      vec2(1.0 - seamWidth, uv.y),
+      skyDx,
+      skyDy
+    ).rgb;
+    vec3 rightEdge = textureGrad(
+      uSkyTexture,
+      vec2(seamWidth, uv.y),
+      skyDx,
+      skyDy
+    ).rgb;
     float seamBlend = smoothstep(-seamWidth, seamWidth, signedSeam);
     color = mix(leftEdge, rightEdge, seamBlend);
   }

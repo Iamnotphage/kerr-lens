@@ -83,9 +83,10 @@ median/p95 rule above when judging the added sampling cost.
 ## V2.1 cached Kerr transfer
 
 V2.1 does not run a Kerr integrator for every display pixel on every frame. Non-zero
-spin uses a three-attachment `RGBA16F` transfer target whose long edge is 512 pixels on
-a physical GPU and 224 pixels on a detected software renderer. It stores the escaped sky
-direction and the Cartesian positions of the first two ordered equatorial-disk
+spin uses a three-attachment `RGBA16F` transfer target. On a physical GPU its long edge
+tracks 75% of the selected drawing-buffer long edge within a fixed `512–1024` bound;
+a detected software renderer retains 224 pixels. It stores the escaped sky direction
+and the Cartesian positions of the first two ordered equatorial-disk
 intersections. Cartesian hit coordinates remain continuous where a wrapped azimuth would
 jump by `2π` and create a visible interpolation seam. A 512-sample `R32F`
 polar profile independently evaluates the finite-observer Kerr critical curve so its edge
@@ -94,28 +95,32 @@ is not limited by the lower-resolution transfer target.
 The map does not integrate singular Boyer–Lindquist azimuth directly. It evolves the
 Cartesian angular direction, whose derivative stays finite at the spin axis, and folds
 midpoint overshoot at the exact Carter polar root. Even transfer dimensions keep the
-measure-zero axial ray between texel centers. On invalidation, a six-column MRT pass
-reconstructs the remaining undersampled axial footprint and copies it back into the map.
-The strip costs about 41 KiB at a 288-pixel map height and adds no display-time branch or
-filtering.
+measure-zero axial ray between texel centers. The previous six-column reconstruction pass
+was removed because widening that interval mixed distinct high-order rays into a visible
+vertical ribbon. The normal one-texel interpolation remains, while the higher physical-GPU
+map density keeps its projected footprint small.
 
 Equatorial crossings are retained through a `2.25–14 r_s` guard band around the visible
 `3–12 r_s` annulus. The full-resolution display shader evaluates the actual disk edge from
 the interpolated Cartesian radius, instead of magnifying a low-resolution hit/no-hit edge.
 The photographic sky's non-identical longitude endpoints are likewise crossfaded over a
-narrow spherical strip so lensing cannot turn an asset seam into a screen-space cut.
+four-source-texel spherical strip. This bridges the asset boundary without turning the
+former 74-texel repair band into several broad higher-order images. Longitude derivatives
+are reduced to their shortest periodic displacement before explicit mip selection, so the
+`1 → 0` wrap cannot masquerade as a full-panorama pixel footprint. `textureGrad` replaces
+the original panorama lookup rather than adding another steady-state sample.
 
 Changing spin, inclination, observer radius, or viewport aspect invalidates the map. By
 default, the renderer performs one offscreen MRT draw with a fixed 224-step Carter
-integrator plus the six-column repair pass on the next displayed frame. This may stall an
-interaction frame, but never substitutes a lower-fidelity lens path, delays the rebuild, or
-changes the selected render scale. After the rebuild, rendering returns to the steady-state
-contract:
+integrator on the next displayed frame. This may stall an interaction frame, but never
+substitutes a lower-fidelity lens path, delays the rebuild, or changes the selected render
+scale. After the rebuild, rendering returns to the steady-state contract:
 
 - one display draw call and one full-screen triangle;
 - three transfer samples plus one one-dimensional shadow sample at every pixel;
 - no geodesic loop, CPU upload, or map allocation per animation frame; and
-- approximately 3.4 MiB for a 512×288 three-attachment transfer map, plus 2 KiB for the critical-curve profile.
+- approximately 3–24 MiB for the bounded three-attachment transfer map, depending on
+  aspect and selected drawing resolution, plus 2 KiB for the critical-curve profile.
 
 Map rebuild latency and steady-state frame time are separate measurements. The exported
 benchmark begins after shader warm-up and the initial Kerr map build, so median/p95/p99

@@ -144,6 +144,37 @@ test("renders distinct positive and negative Kerr lens maps", async ({ page }, t
   expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
 });
 
+test("captures the closest Kerr view without a widened axial repair", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(60_000);
+  const runtimeErrors = watchRuntimeErrors(page);
+  await page.setViewportSize({ width: 1600, height: 1200 });
+  await page.goto("/");
+  await waitForRenderer(page);
+
+  await page.locator("#toggle-panel").click();
+  await page.locator("#paused").check({ force: true });
+  await page.locator("#spin").fill("0.8");
+  await page.locator("#inclination").fill("85");
+  await page.locator("#distance").fill("7");
+  await page.locator("#toggle-panel").click();
+  await waitForKerrMap(page, 0.8);
+  await page.evaluate(() => window.__KERR_LENS_VALIDATION__?.setSimulationTime(0));
+  await page.waitForTimeout(180);
+
+  const report = await page.evaluate(() => window.__KERR_LENS_VALIDATION__?.getReport());
+  expect(report?.observer.radius).toBe(7);
+  expect(report?.observer.inclination).toBeCloseTo((85 * Math.PI) / 180, 4);
+  expect(report?.gpu.kerrLensing.displayed).toBe(true);
+  expect(report?.gpu.kerrLensing.width).toBeGreaterThan(0);
+  await page.screenshot({
+    path: testInfo.outputPath("kerr-close-axis-continuity.png"),
+    fullPage: true,
+  });
+  expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
+});
+
 test("switches models manually and restores the previous Kerr spin", async ({ page }) => {
   const runtimeErrors = watchRuntimeErrors(page);
   await page.goto("/");
