@@ -82,7 +82,7 @@ Mass and Eddington ratio are logarithmic controls spanning `10⁷–10¹⁰ M☉
 - Dragging never changes the selected quality or lens model; an invalidated Kerr map is rebuilt synchronously before the next displayed frame.
 - Adaptive mode targets 60 fps using an exponential moving average of frame time.
 - Device pixel ratio is capped to avoid accidental 4K-class rendering on dense displays.
-- A 2048×1024 Milky Way panorama is loaded once and sampled as a mipmapped texture (284 KiB compressed).
+- A 2048×1024 Milky Way panorama is loaded once and sampled with mipmapping plus capped `8:1` hardware anisotropy (284 KiB compressed), preventing elongated lens footprints from becoming broad artificial ribbons.
 
 See [docs/performance.md](docs/performance.md) for budgets and measurement rules.
 See [docs/validation.md](docs/validation.md) for the numerical oracle, visual matrix,
@@ -104,7 +104,7 @@ V1 is a physically grounded renderer of a specific model, not a prediction of on
 - Scientific mode treats procedural motion as a surface-brightness perturbation only. Cinematic mode also maps it to optical depth for visible wisps. Neither mode is a fluid/GRMHD simulation.
 - The rendered disk is a finite `3–12 r_s` window of a much larger physical disk. Its outer fade is a presentation boundary.
 - The background is an ESO photographic panorama for visual context, not a Gaia-calibrated astrometric or photometric dataset.
-- The star-texture filtering does not implement the full ray-bundle magnification filter from DNGR.
+- The photographic sky uses bounded anisotropic footprint filtering, but does not implement the separate point-star ray-bundle magnification filter from Bruneton/DNGR.
 - Exposure and tone mapping are display choices; absolute brightness depends on mass, accretion rate, wavelength band, and instrument.
 - V2.1 propagates spin through the light rays and shadow, but the emitting surface still begins at the Schwarzschild ISCO. Spin-dependent Novikov–Thorne flux and the complete Kerr emitter four-velocity begin in V2.2.
 - Polarization, finite disk thickness, returning radiation, limb darkening, magnetic stress, and GRMHD flow remain out of scope.

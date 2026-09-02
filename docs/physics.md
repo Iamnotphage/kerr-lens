@@ -177,7 +177,7 @@ James et al. describe the *Interstellar* disk as an artist-created, physically t
 
 ## Celestial background
 
-Escaped rays sample an equirectangular ESO/S. Brunier Milky Way panorama, so the same Schwarzschild geodesic mapping lenses the background and the disk. The panorama supplies visual context only: its orientation is presentational, and it is not a Gaia-calibrated astrometric or photometric sky model.
+Escaped rays sample an equirectangular ESO/S. Brunier Milky Way panorama, so the same Schwarzschild geodesic mapping lenses the background and the disk. Near a critical curve, the screen-to-sky Jacobian can make a pixel footprint extremely elongated. The panorama therefore uses hardware anisotropic mip filtering, capped at `8:1`, so the long direction is integrated without incorrectly blurring the narrow direction into broad ribbons. This is footprint anti-aliasing for the extended photographic source; it is not the dedicated point-star magnification filter described by Bruneton. The panorama supplies visual context only: its orientation is presentational, and it is not a Gaia-calibrated astrometric or photometric sky model.
 
 ## Display pipeline
 

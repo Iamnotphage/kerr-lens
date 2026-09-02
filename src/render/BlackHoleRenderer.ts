@@ -24,6 +24,7 @@ import {
   type KerrLensingMapState,
 } from "./KerrLensingMap";
 import type { PhysicsTextures } from "./loadPhysicsTextures";
+import { selectSkyAnisotropy } from "./skySampling";
 
 export type DiskAppearance = "cinematic" | "scientific";
 
@@ -46,6 +47,7 @@ export interface RendererDiagnostics {
   readonly shadingLanguageVersion: string;
   readonly drawCalls: number;
   readonly triangles: number;
+  readonly skyAnisotropy: number;
   readonly kerrLensing: KerrLensingMapState & {
     readonly displayed: boolean;
   };
@@ -60,6 +62,7 @@ export class BlackHoleRenderer {
   private readonly material: RawShaderMaterial;
   private readonly geometry: BufferGeometry;
   private readonly kerrLensingMap: KerrLensingMap;
+  private readonly skyAnisotropy: number;
   private readonly resolution = new Vector2(1, 1);
   private simulationTime = 0;
   private settings: RendererSettings;
@@ -100,6 +103,20 @@ export class BlackHoleRenderer {
       context.getParameter(debugInfo?.UNMASKED_RENDERER_WEBGL ?? context.RENDERER) ?? "",
     );
     const softwareRenderer = /swiftshader|llvmpipe|software/i.test(rendererName);
+
+    // Near a critical curve the lensed sky footprint can be very long in one
+    // direction and sub-pixel thin in the other. Ordinary isotropic mip
+    // selection uses the long axis for both, smearing the galactic plane into
+    // broad concentric ribbons. Hardware anisotropy follows that Jacobian and
+    // spends extra samples only where the footprint actually needs them. Do
+    // not ask a software renderer to emulate this optional hardware path.
+    this.skyAnisotropy = selectSkyAnisotropy(
+      this.renderer.capabilities.getMaxAnisotropy(),
+      softwareRenderer,
+    );
+    physicsTextures.sky.anisotropy = this.skyAnisotropy;
+    physicsTextures.sky.needsUpdate = true;
+
     this.kerrLensingMap = new KerrLensingMap(this.renderer, softwareRenderer);
 
     this.material = new RawShaderMaterial({
@@ -260,6 +277,7 @@ export class BlackHoleRenderer {
       shadingLanguageVersion: parameter(context.SHADING_LANGUAGE_VERSION),
       drawCalls: this.renderer.info.render.calls,
       triangles: this.renderer.info.render.triangles,
+      skyAnisotropy: this.skyAnisotropy,
       kerrLensing: {
         ...this.kerrLensingMap.getState(),
         displayed: this.material.uniforms.uKerrMapReady!.value === 1,

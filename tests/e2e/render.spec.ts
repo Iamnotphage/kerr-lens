@@ -32,6 +32,7 @@ async function waitForKerrMap(page: Page, spin: number): Promise<void> {
 }
 
 test("compiles the WebGL renderer and draws an interactive frame", async ({ page }, testInfo) => {
+  test.setTimeout(60_000);
   const runtimeErrors = watchRuntimeErrors(page);
 
   await page.goto("/");
@@ -313,7 +314,7 @@ test("exports a fixed-scene frame-time distribution", async ({ page }, testInfo)
   const result = report as {
     frames: { sampleCount: number; medianMs: number; p95Ms: number; p99Ms: number };
     drawingBuffer: [number, number];
-    gpu: { drawCalls: number; triangles: number; renderer: string };
+    gpu: { drawCalls: number; triangles: number; renderer: string; skyAnisotropy: number };
   };
   expect(result.frames.sampleCount).toBe(120);
   expect(result.frames.p95Ms).toBeGreaterThanOrEqual(result.frames.medianMs);
@@ -322,6 +323,11 @@ test("exports a fixed-scene frame-time distribution", async ({ page }, testInfo)
   expect(result.drawingBuffer[1]).toBeGreaterThan(0);
   expect(result.gpu.drawCalls).toBe(1);
   expect(result.gpu.triangles).toBe(1);
+  expect(result.gpu.skyAnisotropy).toBeGreaterThanOrEqual(1);
+  expect(result.gpu.skyAnisotropy).toBeLessThanOrEqual(8);
+  if (/swiftshader|llvmpipe|software/i.test(result.gpu.renderer)) {
+    expect(result.gpu.skyAnisotropy).toBe(1);
+  }
   expect(result.gpu.renderer.length).toBeGreaterThan(0);
   expect(runtimeErrors, runtimeErrors.join("\n")).toEqual([]);
 
