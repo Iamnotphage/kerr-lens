@@ -24,6 +24,11 @@ after spin, inclination, distance, or viewport aspect changes. Animation frames 
 the cached sky and two ordered disk hits in constant time; the 224-step integration loop
 is not in the steady-state frame path.
 
+V2.1.1 sizes the physical-GPU transfer map from the selected drawing resolution, bounded
+to `512–1024` pixels on its long edge. It also removes the former six-column axial
+crossfade and limits the photographic longitude repair to the two texels on either side
+of the wrap, preventing close views from magnifying those repairs into false nested bands.
+
 ## Run locally
 
 Requirements: Node.js 24 or newer.
@@ -76,6 +81,7 @@ Mass and Eddington ratio are logarithmic controls spanning `10⁷–10¹⁰ M☉
 - One oversized full-screen triangle; no scene meshes or depth buffer.
 - Constant-time steady-state shading through either the Schwarzschild tables or cached Kerr transfer map.
 - One display pass and draw call in steady state; by default a parameter change performs its offscreen MRT map update on the next displayed frame.
+- Physical-GPU Kerr maps track the selected drawing resolution up to a bounded 1024-pixel long edge; this increases rebuild work, not animation-frame samples.
 - The radial Page–Thorne temperature calculation is precomputed once into a 1 KiB `R32F` profile.
 - Both materials share two small, mipmapped noise samples per visible disk hit. Broad and fine turbulence are packed into separate texture channels, so two finite-age fields can be blended continuously without increasing the V2.0 sample count. There is no particle loop, extra pass, or extra draw call.
 - High-performance WebGL context and no MSAA.
