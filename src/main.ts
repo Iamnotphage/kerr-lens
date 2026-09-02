@@ -22,6 +22,7 @@ interface ValidationReport {
   readonly kerr: KerrParameters;
   readonly appearance: DiskAppearance;
   readonly quality: QualityMode;
+  readonly interactionFallback: boolean;
   readonly drawingBuffer: readonly [number, number];
   readonly devicePixelRatio: number;
   readonly gpu: ReturnType<BlackHoleRenderer["getDiagnostics"]>;
@@ -89,6 +90,7 @@ const eddingtonRatioInput = element<HTMLInputElement>("eddington-ratio");
 const exposureInput = element<HTMLInputElement>("exposure");
 const appearanceInput = element<HTMLSelectElement>("disk-appearance");
 const qualityInput = element<HTMLSelectElement>("quality");
+const interactionFallbackInput = element<HTMLInputElement>("interaction-fallback");
 const diskInput = element<HTMLInputElement>("disk-enabled");
 const dopplerInput = element<HTMLInputElement>("doppler-enabled");
 const skyInput = element<HTMLInputElement>("sky-enabled");
@@ -206,6 +208,8 @@ async function start(): Promise<void> {
     qualityInput.value = "balanced";
     pausedInput.checked = true;
   }
+  governor.setInteractionFallbackEnabled(interactionFallbackInput.checked);
+  blackHole.setInteractionFallbackEnabled(interactionFallbackInput.checked);
   governor.setMode(qualityInput.value as QualityMode);
 
   const frameBenchmark = new FrameBenchmark(90, benchmarkFrameCount);
@@ -224,6 +228,7 @@ async function start(): Promise<void> {
       kerr: activeKerr,
       appearance: appearanceInput.value as DiskAppearance,
       quality: qualityInput.value as QualityMode,
+      interactionFallback: interactionFallbackInput.checked,
       drawingBuffer: [buffer.x, buffer.y],
       devicePixelRatio: window.devicePixelRatio || 1,
       gpu: blackHole.getDiagnostics(),
@@ -415,6 +420,11 @@ async function start(): Promise<void> {
   });
   qualityInput.addEventListener("change", () => {
     governor.setMode(qualityInput.value as QualityMode);
+    applySize();
+  });
+  interactionFallbackInput.addEventListener("change", () => {
+    governor.setInteractionFallbackEnabled(interactionFallbackInput.checked);
+    blackHole.setInteractionFallbackEnabled(interactionFallbackInput.checked);
     applySize();
   });
   diskInput.addEventListener("change", () => blackHole.updateSettings({ diskEnabled: diskInput.checked }));
