@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import fragmentShader from "../shaders/black-hole.frag.glsl?raw";
 import {
   selectSkyAnisotropy,
   SKY_ANISOTROPY_BUDGET,
@@ -19,5 +20,11 @@ describe("lensed sky sampling", () => {
 
   it("does not emulate anisotropy on a software renderer", () => {
     expect(selectSkyAnisotropy(16, true)).toBe(1);
+  });
+
+  it("unwraps equirectangular derivatives before selecting a sky mip", () => {
+    expect(fragmentShader).toContain("skyDx.x -= round(skyDx.x);");
+    expect(fragmentShader).toContain("skyDy.x -= round(skyDy.x);");
+    expect(fragmentShader).toContain("textureGrad(uSkyTexture, uv, skyDx, skyDy)");
   });
 });
