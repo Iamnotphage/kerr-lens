@@ -18,7 +18,11 @@ import fragmentShader from "../shaders/black-hole.frag.glsl?raw";
 import vertexShader from "../shaders/fullscreen.vert.glsl?raw";
 import type { ObserverState } from "./ObserverController";
 import { wrapDiskFlowTime } from "./diskFlow";
-import { KerrLensingMap, type KerrLensingMapState } from "./KerrLensingMap";
+import {
+  KERR_SPIN_THRESHOLD,
+  KerrLensingMap,
+  type KerrLensingMapState,
+} from "./KerrLensingMap";
 import type { PhysicsTextures } from "./loadPhysicsTextures";
 
 export type DiskAppearance = "cinematic" | "scientific";
@@ -42,7 +46,9 @@ export interface RendererDiagnostics {
   readonly shadingLanguageVersion: string;
   readonly drawCalls: number;
   readonly triangles: number;
-  readonly kerrLensing: KerrLensingMapState;
+  readonly kerrLensing: KerrLensingMapState & {
+    readonly displayed: boolean;
+  };
 }
 
 export class BlackHoleRenderer {
@@ -134,6 +140,8 @@ export class BlackHoleRenderer {
         uSkyEnabled: { value: settings.skyEnabled ? 1 : 0 },
         uKerrMapReady: { value: 0 },
         uKerrSpin: { value: settings.spin },
+        uKerrObserverRadiusRs: { value: observer.radius },
+        uKerrObserverInclination: { value: observer.inclination },
         uKerrShadowCenter: { value: new Vector2() },
       },
     });
@@ -171,15 +179,24 @@ export class BlackHoleRenderer {
     (this.material.uniforms.uCameraRightAxis?.value as Vector3).fromArray(observer.rightAxis);
     (this.material.uniforms.uCameraUpAxis?.value as Vector3).fromArray(observer.upAxis);
     (this.material.uniforms.uCameraOutwardAxis?.value as Vector3).fromArray(observer.outwardAxis);
-    if (this.kerrLensingMap.request(this.settings.spin, state)) {
-      this.material.uniforms.uKerrMapReady!.value = 0;
-    }
+    // A parameter change only dirties the back-end transfer map. Keep the last
+    // complete Kerr map on screen until its replacement is ready; dropping to
+    // Schwarzschild during the settle window changes the apparent shadow size.
+    this.kerrLensingMap.request(this.settings.spin, state);
   }
 
   updateSettings(settings: Partial<RendererSettings>): void {
     this.settings = { ...this.settings, ...settings };
     if (settings.spin !== undefined) {
-      this.material.uniforms.uKerrSpin!.value = settings.spin;
+      if (Math.abs(settings.spin) < KERR_SPIN_THRESHOLD) {
+        // The exact zero-spin path is intentionally Schwarzschild, so do not
+        // leave a stale rotating map visible before the next animation frame.
+        this.material.uniforms.uKerrMapReady!.value = 0;
+      } else if (this.kerrLensingMap.getState().ready) {
+        // Re-enable a still-valid map if the control crossed zero twice before
+        // a frame had a chance to process the intermediate request.
+        this.material.uniforms.uKerrMapReady!.value = 1;
+      }
     }
     if (settings.peakColorTemperature !== undefined) {
       this.material.uniforms.uDiskPeakTemperature!.value = settings.peakColorTemperature;
@@ -243,7 +260,10 @@ export class BlackHoleRenderer {
       shadingLanguageVersion: parameter(context.SHADING_LANGUAGE_VERSION),
       drawCalls: this.renderer.info.render.calls,
       triangles: this.renderer.info.render.triangles,
-      kerrLensing: this.kerrLensingMap.getState(),
+      kerrLensing: {
+        ...this.kerrLensingMap.getState(),
+        displayed: this.material.uniforms.uKerrMapReady!.value === 1,
+      },
     };
   }
 
@@ -251,6 +271,8 @@ export class BlackHoleRenderer {
     const state = this.kerrLensingMap.getState();
     this.material.uniforms.uKerrMapReady!.value = state.ready ? 1 : 0;
     this.material.uniforms.uKerrSpin!.value = state.spin;
+    this.material.uniforms.uKerrObserverRadiusRs!.value = state.observerRadius;
+    this.material.uniforms.uKerrObserverInclination!.value = state.observerInclination;
     (this.material.uniforms.uKerrShadowCenter!.value as Vector2).set(
       state.shadowCenterX,
       state.shadowCenterY,

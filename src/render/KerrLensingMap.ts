@@ -31,6 +31,7 @@ const FOV_Y = (48 * Math.PI) / 180;
 const SHADOW_PROFILE_SIZE = 512;
 const UPDATE_SETTLE_MS = 55;
 const AXIS_REPAIR_WIDTH = 6;
+export const KERR_SPIN_THRESHOLD = 0.0015;
 
 function evenDimension(value: number): number {
   const rounded = Math.max(96, Math.round(value));
@@ -232,7 +233,7 @@ export class KerrLensingMap {
     }
 
     const { spin, radius, inclination } = this.requested;
-    if (Math.abs(spin) < 0.0015) {
+    if (Math.abs(spin) < KERR_SPIN_THRESHOLD) {
       this.state = {
         ...this.state,
         ready: false,
