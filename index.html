@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta
       name="description"
-      content="Performance-first Kerr null-geodesic lensing and a relativistic thin disk for the web."
+      content="Performance-first Kerr and Schwarzschild null-geodesic lensing with a relativistic thin disk for the web."
     />
     <meta name="theme-color" content="#03050a" />
     <title>Kerr Lens — Kerr Lensing V2.1</title>
   </head>
   <body>
     <main id="app">
-      <canvas id="scene" aria-label="Interactive Kerr black hole with null-geodesic ray tracing"></canvas>
+      <canvas id="scene" aria-label="Interactive rotating or non-rotating black hole with null-geodesic ray tracing"></canvas>
 
       <div class="vignette" aria-hidden="true"></div>
 
@@ -37,7 +37,7 @@
         <div class="panel__header">
           <div>
             <p class="eyebrow">SPACETIME &amp; MATERIAL</p>
-            <h2>Kerr lensing</h2>
+            <h2 id="panel-title">Kerr lensing</h2>
           </div>
           <button class="icon-button" id="toggle-panel" type="button" aria-label="Expand controls" aria-expanded="false">
             <span></span><span></span>
@@ -45,14 +45,22 @@
         </div>
 
         <div class="panel__body" id="panel-body">
-          <div class="spacetime-status" id="spacetime-status" data-spin-sense="schwarzschild">
-            <span>KERR METRIC PARAMETERS</span>
+          <div class="spacetime-status" id="spacetime-status" data-spin-sense="prograde">
+            <span id="spacetime-metric-label">KERR METRIC PARAMETERS</span>
             <strong id="spacetime-status-title">PROGRADE KERR LENSING</strong>
-            <small>V2.1 traces Carter-separated Kerr rays into a cached finite-observer transfer map.</small>
+            <small id="spacetime-status-detail">V2.1 traces Carter-separated Kerr rays into a cached finite-observer transfer map.</small>
+          </div>
+
+          <div class="control control--model">
+            <label>Spacetime model</label>
+            <div class="model-selector" role="group" aria-label="Spacetime model">
+              <button id="model-kerr" type="button" aria-pressed="true">Kerr</button>
+              <button id="model-schwarzschild" type="button" aria-pressed="false">Schwarzschild</button>
+            </div>
           </div>
 
           <div class="control control--spin">
-            <div class="control__label"><label for="spin">Dimensionless spin a*</label><output id="spin-value">0.000</output></div>
+            <div class="control__label"><label for="spin">Dimensionless spin a*</label><output id="spin-value">+0.800</output></div>
             <input id="spin" type="range" min="-0.998" max="0.998" step="0.001" value="0.8" />
           </div>
           <p class="spin-note" id="spin-note">Spin aligned with disk orbit · frame dragging shifts the critical curve with the flow.</p>
@@ -110,7 +118,6 @@
           </div>
 
           <div class="switches">
-            <label class="switch" title="Optionally lower resolution and defer Kerr map rebuilds while interacting"><span>Interaction fallback</span><input id="interaction-fallback" type="checkbox" /><i></i></label>
             <label class="switch"><span>Thermal disk</span><input id="disk-enabled" type="checkbox" checked /><i></i></label>
             <label class="switch"><span>Relativistic shift</span><input id="doppler-enabled" type="checkbox" /><i></i></label>
             <label class="switch"><span>Background sky</span><input id="sky-enabled" type="checkbox" checked /><i></i></label>

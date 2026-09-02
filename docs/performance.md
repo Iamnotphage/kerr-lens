@@ -29,10 +29,10 @@ Adaptive mode maintains an exponential moving average of frame time.
 - Above 18.5 ms, internal resolution decreases in 8% steps.
 - Below 14.2 ms, it increases in 4% steps.
 - The permitted scale is 52–100% of the capped device resolution.
-- The optional Interaction fallback caps drag/zoom scale at 64%; it is disabled by default.
 - Device pixel ratio is capped at 1.5 before applying the scale.
 
-This changes sampling density, not the physical model.
+Adaptive scaling only runs when the user explicitly selects Adaptive mode. Dragging itself
+never changes sampling density or the physical model.
 
 ## Measurement checklist
 
@@ -108,9 +108,9 @@ narrow spherical strip so lensing cannot turn an asset seam into a screen-space 
 Changing spin, inclination, observer radius, or viewport aspect invalidates the map. By
 default, the renderer performs one offscreen MRT draw with a fixed 224-step Carter
 integrator plus the six-column repair pass on the next displayed frame. This may stall an
-interaction frame, but never substitutes a lower-fidelity lens path. Users may explicitly
-enable Interaction fallback to retain the last complete map and wait 55 ms for input to
-settle before rebuilding. After either path, rendering returns to the steady-state contract:
+interaction frame, but never substitutes a lower-fidelity lens path, delays the rebuild, or
+changes the selected render scale. After the rebuild, rendering returns to the steady-state
+contract:
 
 - one display draw call and one full-screen triangle;
 - three transfer samples plus one one-dimensional shadow sample at every pixel;

@@ -6,7 +6,6 @@ export interface ObserverState {
 
 interface ControllerCallbacks {
   onChange: (state: ObserverState) => void;
-  onInteraction: () => void;
   onFirstInteraction: () => void;
 }
 
@@ -55,7 +54,6 @@ export class ObserverController {
   }
 
   private noteInteraction(): void {
-    this.callbacks.onInteraction();
     if (this.firstInteraction) {
       this.firstInteraction = false;
       this.callbacks.onFirstInteraction();

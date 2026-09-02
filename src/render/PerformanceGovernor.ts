@@ -19,24 +19,11 @@ export class PerformanceGovernor {
   private frameEma = 16.7;
   private samples = 0;
   private lastAdjustment = 0;
-  private interactiveUntil = 0;
-  private interactionFallbackEnabled = false;
 
   setMode(mode: QualityMode): void {
     this.mode = mode;
     this.samples = 0;
-    this.recomputeScale(performance.now());
-  }
-
-  setInteractionFallbackEnabled(enabled: boolean): void {
-    this.interactionFallbackEnabled = enabled;
-    if (!enabled) this.interactiveUntil = 0;
-    this.recomputeScale(performance.now());
-  }
-
-  markInteraction(durationMs = 180): void {
-    if (!this.interactionFallbackEnabled) return;
-    this.interactiveUntil = performance.now() + durationMs;
+    this.recomputeScale();
   }
 
   update(frameMs: number, now: number): PerformanceSnapshot {
@@ -49,7 +36,7 @@ export class PerformanceGovernor {
       else if (this.frameEma < 14.2) this.adaptiveScale = Math.min(1, this.adaptiveScale + 0.04);
       this.lastAdjustment = now;
     }
-    this.recomputeScale(now);
+    this.recomputeScale();
 
     return {
       fps: 1000 / this.frameEma,
@@ -62,10 +49,7 @@ export class PerformanceGovernor {
     return this.effectiveScale;
   }
 
-  private recomputeScale(now: number): void {
-    const requested = this.mode === "auto" ? this.adaptiveScale : FIXED_SCALE[this.mode];
-    this.effectiveScale = this.interactionFallbackEnabled && now < this.interactiveUntil
-      ? Math.min(requested, 0.64)
-      : requested;
+  private recomputeScale(): void {
+    this.effectiveScale = this.mode === "auto" ? this.adaptiveScale : FIXED_SCALE[this.mode];
   }
 }
