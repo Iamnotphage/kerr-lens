@@ -27,7 +27,8 @@ is not in the steady-state frame path.
 V2.1.1 sizes the physical-GPU transfer map from the selected drawing resolution, bounded
 to `512–1024` pixels on its long edge. It also removes the former six-column axial
 crossfade and limits the photographic longitude repair to the two texels on either side
-of the wrap, preventing close views from magnifying those repairs into false nested bands.
+of the wrap. Periodic longitude derivatives are explicitly unwrapped before mip selection,
+preventing close views from magnifying those sampling repairs into false nested bands.
 
 ## Run locally
 
